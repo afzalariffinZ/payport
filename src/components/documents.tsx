@@ -296,7 +296,7 @@ export default function Documents({ onBack }: DocumentsProps) {
           {/* Documents Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {documentCategories.map((category) => (
-              <div key={category.id} className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow duration-200">
+              <div key={category.id} className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow duration-200 group">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">
@@ -307,7 +307,7 @@ export default function Documents({ onBack }: DocumentsProps) {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{category.description}</p>
+                    <p className="text-sm text-gray-600 mb-2 opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 transition-all duration-200">{category.description}</p>
                     <p className="text-xs text-gray-500">
                       Accepts: {category.acceptedFormats.join(', ')}
                     </p>
