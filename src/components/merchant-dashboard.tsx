@@ -14,95 +14,48 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useDocumentData } from "@/lib/document-data-store";
-import BusinessInformation from "./business-information";
-import PersonalInformation from "./personal-information";
-import BankInformation from "./bank-information";
-import CompanyContact from "./company-contact";
-import Documents from "./documents";
-import FoodMenu from "./food-menu";
 import QRCodeModal from "./qr-code-modal";
+import Link from "next/link";
 
 interface MenuItem {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
-  onClick: () => void;
+  route: string;
 }
 
 export default function MerchantDashboard() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'business-info' | 'personal-info' | 'bank-info' | 'company-contact' | 'documents' | 'food-menu'>('dashboard');
   const [showQRModal, setShowQRModal] = useState(false);
-  
-  const { pendingNavigation } = useDocumentData();
-
-  // Handle AI navigation requests
-  useEffect(() => {
-    if (pendingNavigation.targetPage && pendingNavigation.targetPage !== currentView) {
-      console.log('AI navigation request to:', pendingNavigation.targetPage);
-      setCurrentView(pendingNavigation.targetPage as any);
-    }
-  }, [pendingNavigation.targetPage, currentView]);
-
-  const handleMenuItemClick = (itemName: string) => {
-    console.log(`${itemName} clicked`);
-    
-    switch (itemName) {
-      case "Business Information":
-        setCurrentView('business-info');
-        break;
-      case "Personal Information":
-        setCurrentView('personal-info');
-        break;
-      case "Company Contact":
-        setCurrentView('company-contact');
-        break;
-      case "Bank Information":
-        setCurrentView('bank-info');
-        break;
-      case "Documents":
-        setCurrentView('documents');
-        break;
-      case "Food Menu":
-        setCurrentView('food-menu');
-        break;
-      default:
-        console.log(`${itemName} functionality coming soon`);
-    }
-  };
-
-  const handleBackToDashboard = () => {
-    setCurrentView('dashboard');
-  };
 
   const menuItems: MenuItem[] = [
     {
       icon: Building2,
       label: "Business Information",
-      onClick: () => handleMenuItemClick("Business Information"),
+      route: "/business-information",
     },
     {
       icon: User,
       label: "Personal Information",
-      onClick: () => handleMenuItemClick("Personal Information"),
+      route: "/personal-information",
     },
     {
       icon: Phone,
       label: "Company Contact",
-      onClick: () => handleMenuItemClick("Company Contact"),
+      route: "/company-contact",
     },
     {
       icon: Landmark,
       label: "Bank Information",
-      onClick: () => handleMenuItemClick("Bank Information"),
+      route: "/bank-information",
     },
     {
       icon: FileText,
       label: "Documents",
-      onClick: () => handleMenuItemClick("Documents"),
+      route: "/documents",
     },
     {
       icon: UtensilsCrossed,
       label: "Food Menu",
-      onClick: () => handleMenuItemClick("Food Menu"),
+      route: "/food-menu",
     },
   ];
 
@@ -116,23 +69,7 @@ export default function MerchantDashboard() {
     // Here you can add edit profile logic
   };
 
-  // Render different pages based on current view
-  switch (currentView) {
-    case 'business-info':
-      return <BusinessInformation onBack={handleBackToDashboard} />;
-    case 'personal-info':
-      return <PersonalInformation onBack={handleBackToDashboard} />;
-    case 'bank-info':
-      return <BankInformation onBack={handleBackToDashboard} />;
-    case 'company-contact':
-      return <CompanyContact onBack={handleBackToDashboard} />;
-    case 'documents':
-      return <Documents onBack={handleBackToDashboard} />;
-    case 'food-menu':
-      return <FoodMenu onBack={handleBackToDashboard} />;
-    default:
-      // Render main dashboard
-      return (
+  return (
         <>
           <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
             {/* Header/Navigation Bar */}
@@ -199,9 +136,9 @@ export default function MerchantDashboard() {
                       {menuItems.map((item, index) => {
                         const IconComponent = item.icon;
                         return (
-                          <button
+                          <Link
                             key={index}
-                            onClick={item.onClick}
+                            href={item.route}
                             className="group flex flex-col items-center justify-center p-6 bg-gray-50 hover:bg-pink-50 rounded-xl transition-all duration-200 min-h-[140px] hover:shadow-md hover:scale-105 border border-transparent hover:border-pink-200"
                             aria-label={`Navigate to ${item.label}`}
                           >
@@ -211,7 +148,7 @@ export default function MerchantDashboard() {
                             <span className="text-sm font-medium text-gray-900 text-center leading-snug group-hover:text-pink-700 transition-colors duration-200">
                               {item.label}
                             </span>
-                          </button>
+                          </Link>
                         );
                       })}
                     </div>
@@ -270,5 +207,4 @@ export default function MerchantDashboard() {
           />
         </>
       );
-  }
 } 

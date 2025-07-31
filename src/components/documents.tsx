@@ -12,20 +12,23 @@ import {
   X,
   Plus,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
+// Define the shape of a single document
 interface Document {
   id: string;
   name: string;
   type: string;
-  url?: string;
-  size?: string;
-  uploadDate?: string;
-  status: 'uploaded' | 'missing' | 'pending';
+  url: string;
+  size: string;
+  uploadDate: string;
+  status: 'uploaded';
 }
 
+// Define the shape of a document category
 interface DocumentCategory {
   id: string;
   name: string;
@@ -39,115 +42,91 @@ interface DocumentsProps {
   onBack: () => void;
 }
 
+// This is the "blueprint" for your page.
+const DOCUMENT_CATEGORIES_TEMPLATE: DocumentCategory[] = [
+  { id: 'business_license', name: 'Business License', description: 'Official business registration license', required: true, acceptedFormats: ['PDF', 'JPG', 'PNG'] },
+  { id: 'halal_cert', name: 'Halal Certificate', description: 'Halal certification for food business', required: true, acceptedFormats: ['PDF', 'JPG', 'PNG'] },
+  { id: 'ic_passport', name: 'IC/Passport', description: 'Owner identification document', required: true, acceptedFormats: ['PDF', 'JPG', 'PNG'] },
+  { id: 'menu_photos', name: 'Menu Photos', description: 'High-quality photos of your menu', required: false, acceptedFormats: ['JPG', 'PNG', 'HEIC'] },
+  { id: 'outlet_photos', name: 'Outlet Photos', description: 'Photos showing your restaurant interior and exterior', required: false, acceptedFormats: ['JPG', 'PNG', 'HEIC'] },
+  { id: 'signed_agreement', name: 'Signed Agreement', description: 'Merchant agreement with PayPort Real', required: true, acceptedFormats: ['PDF'] },
+  { id: 'ssm_cert', name: 'SSM Certificate', description: 'Companies Commission of Malaysia registration', required: true, acceptedFormats: ['PDF', 'JPG', 'PNG'] },
+  { id: 'bank_statement', name: 'Bank Statement', description: 'Latest bank statement for account verification', required: true, acceptedFormats: ['PDF'] }
+];
+
 export default function Documents({ onBack }: DocumentsProps) {
+  const [documentCategories, setDocumentCategories] = useState<DocumentCategory[]>(DOCUMENT_CATEGORIES_TEMPLATE);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
 
-  // Document categories with initial mock data
-  const [documentCategories, setDocumentCategories] = useState<DocumentCategory[]>([
-    {
-      id: 'business-license',
-      name: 'Business License',
-      description: 'Official business registration license',
-      required: true,
-      acceptedFormats: ['PDF', 'JPG', 'PNG'],
-      document: {
-        id: '1',
-        name: 'business-license.pdf',
-        type: 'PDF',
-        url: '/documents/business-license.pdf',
-        size: '2.4 MB',
-        uploadDate: '2024-01-15',
-        status: 'uploaded'
+  useEffect(() => {
+    const id = process.env.NEXT_PUBLIC_USER_ID || "MRT-56789";
+
+    async function fetchDocuments() {
+      try {
+        const response = await fetch(`/api/merchant/${id}/documents`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to fetch documents from the server.");
+        }
+        const data = await response.json();
+
+        if (data && data.documents) {
+          const apiUrls = data.documents;
+          const updatedCategories = DOCUMENT_CATEGORIES_TEMPLATE.map(category => {
+            const url = apiUrls[category.id];
+            if (url) {
+              const fullFilename = decodeURIComponent(url.substring(url.lastIndexOf('/') + 1).split('?')[0]);
+              const underscoreIndex = fullFilename.indexOf('_');
+              
+              // THE FIX: Create a clean display name
+              const displayName = underscoreIndex !== -1 
+                ? fullFilename.substring(underscoreIndex + 1) 
+                : fullFilename;
+
+              return {
+                ...category,
+                document: {
+                  id: category.id,
+                  name: displayName, // Use the clean name
+                  type: url.substring(url.lastIndexOf('.') + 1).split('?')[0].toUpperCase(),
+                  url: url,
+                  size: 'N/A',
+                  uploadDate: 'N/A',
+                  status: 'uploaded' as const
+                }
+              };
+            }
+            return { ...category, document: undefined };
+          });
+          setDocumentCategories(updatedCategories);
+        } else {
+          throw new Error("API response did not contain the expected 'documents' object.");
+        }
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
       }
-    },
-    {
-      id: 'halal-certificate',
-      name: 'Halal Certificate',
-      description: 'Halal certification for food business',
-      required: true,
-      acceptedFormats: ['PDF', 'JPG', 'PNG'],
-      document: {
-        id: '2',
-        name: 'halal-cert.jpg',
-        type: 'JPG',
-        url: '/documents/halal-cert.jpg',
-        size: '1.8 MB',
-        uploadDate: '2024-01-12',
-        status: 'uploaded'
-      }
-    },
-    {
-      id: 'ic-passport',
-      name: 'IC/Passport',
-      description: 'Owner identification document',
-      required: true,
-      acceptedFormats: ['PDF', 'JPG', 'PNG'],
-      document: undefined
-    },
-    {
-      id: 'menu-photos',
-      name: 'Menu Photos',
-      description: 'High-quality photos of your menu',
-      required: false,
-      acceptedFormats: ['JPG', 'PNG', 'HEIC'],
-      document: {
-        id: '3',
-        name: 'menu-collection.jpg',
-        type: 'JPG',
-        url: '/documents/menu-photos.jpg',
-        size: '3.2 MB',
-        uploadDate: '2024-01-10',
-        status: 'uploaded'
-      }
-    },
-    {
-      id: 'outlet-photos',
-      name: 'Outlet Photos',
-      description: 'Photos showing your restaurant interior and exterior',
-      required: false,
-      acceptedFormats: ['JPG', 'PNG', 'HEIC'],
-      document: undefined
-    },
-    {
-      id: 'signed-agreement',
-      name: 'Signed Agreement',
-      description: 'Merchant agreement with PayPort Real',
-      required: true,
-      acceptedFormats: ['PDF'],
-      document: undefined
-    },
-    {
-      id: 'ssm-certificate',
-      name: 'SSM Certificate',
-      description: 'Companies Commission of Malaysia registration',
-      required: true,
-      acceptedFormats: ['PDF', 'JPG', 'PNG'],
-      document: {
-        id: '4',
-        name: 'ssm-certificate.pdf',
-        type: 'PDF',
-        url: '/documents/ssm-cert.pdf',
-        size: '1.1 MB',
-        uploadDate: '2024-01-08',
-        status: 'uploaded'
-      }
-    },
-    {
-      id: 'bank-statement',
-      name: 'Bank Statement',
-      description: 'Latest bank statement for account verification',
-      required: true,
-      acceptedFormats: ['PDF'],
-      document: undefined
     }
-  ]);
+    fetchDocuments();
+  }, []);
 
   const handleViewDocument = (document: Document) => {
-    setSelectedDocument(document);
-    setIsViewerOpen(true);
+    if (document.url) {
+      window.open(document.url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleDownloadDocument = (document: Document) => {
+    if (document.url) {
+      window.open(document.url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleUploadClick = (categoryId: string) => {
@@ -159,47 +138,33 @@ export default function Documents({ onBack }: DocumentsProps) {
     const file = event.target.files?.[0];
     if (!file || !uploadingFor) return;
 
-    // Simulate file upload (in real app, you'd upload to server)
+    console.log(`Simulating upload of ${file.name} for category: ${uploadingFor}`);
     const newDocument: Document = {
-      id: Date.now().toString(),
+      id: uploadingFor,
       name: file.name,
-      type: file.type.split('/')[1]?.toUpperCase() || 'Unknown',
-      url: URL.createObjectURL(file), // In real app, this would be server URL
+      type: file.type.split('/')[1]?.toUpperCase() || 'FILE',
+      url: URL.createObjectURL(file),
       size: formatFileSize(file.size),
       uploadDate: new Date().toISOString().split('T')[0],
       status: 'uploaded'
     };
 
-    // Update the document category
     setDocumentCategories(prev => 
       prev.map(cat => 
-        cat.id === uploadingFor 
-          ? { ...cat, document: newDocument }
-          : cat
+        cat.id === uploadingFor ? { ...cat, document: newDocument } : cat
       )
     );
-
     setUploadingFor(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   };
 
   const handleDeleteDocument = (categoryId: string) => {
     if (confirm('Are you sure you want to delete this document?')) {
       setDocumentCategories(prev => 
         prev.map(cat => 
-          cat.id === categoryId 
-            ? { ...cat, document: undefined }
-            : cat
+          cat.id === categoryId ? { ...cat, document: undefined } : cat
         )
       );
     }
-  };
-
-  const handleDownloadDocument = (document: Document) => {
-    // In real app, this would trigger actual download
-    
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -217,24 +182,35 @@ export default function Documents({ onBack }: DocumentsProps) {
     return <FileText className="w-8 h-8 text-red-500" />;
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'uploaded': return 'text-green-600';
-      case 'pending': return 'text-yellow-600';
-      case 'missing': return 'text-red-600';
-      default: return 'text-gray-600';
-    }
-  };
-
-  const completedDocuments = documentCategories.filter(cat => cat.document?.status === 'uploaded').length;
+  const completedDocuments = documentCategories.filter(cat => cat.document).length;
   const totalDocuments = documentCategories.length;
   const requiredDocuments = documentCategories.filter(cat => cat.required).length;
-  const completedRequired = documentCategories.filter(cat => cat.required && cat.document?.status === 'uploaded').length;
+  const completedRequired = documentCategories.filter(cat => cat.required && cat.document).length;
 
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-pink-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-red-50 p-8">
+        <div className="text-center">
+            <AlertCircle className="mx-auto h-12 w-12 text-red-400"/>
+            <h3 className="mt-4 text-lg font-medium text-red-800">Failed to Load Documents</h3>
+            <p className="mt-2 text-sm text-red-600">{error}</p>
+            <Button onClick={() => window.location.reload()} className="mt-6 bg-red-600 hover:bg-red-700">Try Again</Button>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        {/* Header */}
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
@@ -271,9 +247,7 @@ export default function Documents({ onBack }: DocumentsProps) {
           </div>
         </header>
 
-        {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Progress Overview */}
           <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-900">Document Completion</h2>
@@ -293,7 +267,6 @@ export default function Documents({ onBack }: DocumentsProps) {
             </div>
           </div>
 
-          {/* Documents Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {documentCategories.map((category) => (
               <div key={category.id} className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow duration-200 group">
@@ -321,7 +294,6 @@ export default function Documents({ onBack }: DocumentsProps) {
 
                 {category.document ? (
                   <div className="space-y-4">
-                    {/* Document Info */}
                     <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                       {getDocumentIcon(category.document.type)}
                       <div className="flex-1 min-w-0">
@@ -333,8 +305,6 @@ export default function Documents({ onBack }: DocumentsProps) {
                         </p>
                       </div>
                     </div>
-
-                    {/* Action Buttons */}
                     <div className="flex space-x-2">
                       <Button
                         onClick={() => handleViewDocument(category.document!)}
@@ -363,8 +333,6 @@ export default function Documents({ onBack }: DocumentsProps) {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-
-                    {/* Replace Button */}
                     <Button
                       onClick={() => handleUploadClick(category.id)}
                       variant="outline"
@@ -376,7 +344,6 @@ export default function Documents({ onBack }: DocumentsProps) {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {/* Upload Area */}
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-pink-400 transition-colors duration-200">
                       <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                       <p className="text-sm text-gray-600 mb-2">No document uploaded</p>
@@ -384,8 +351,6 @@ export default function Documents({ onBack }: DocumentsProps) {
                         Click below to upload {category.acceptedFormats.join(', ')} file
                       </p>
                     </div>
-
-                    {/* Upload Button */}
                     <Button
                       onClick={() => handleUploadClick(category.id)}
                       className="w-full bg-pink-500 hover:bg-pink-600"
@@ -400,7 +365,6 @@ export default function Documents({ onBack }: DocumentsProps) {
           </div>
         </main>
 
-        {/* Hidden File Input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -410,74 +374,11 @@ export default function Documents({ onBack }: DocumentsProps) {
         />
       </div>
 
-      {/* Document Viewer Modal */}
       {isViewerOpen && selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl max-h-[90vh] w-full flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">{selectedDocument.name}</h3>
-                <p className="text-sm text-gray-600">
-                  {selectedDocument.type} • {selectedDocument.size} • {selectedDocument.uploadDate}
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  onClick={() => handleDownloadDocument(selectedDocument)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  Download
-                </Button>
-                <button
-                  onClick={() => setIsViewerOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-            </div>
-
-            {/* Document Content */}
-            <div className="flex-1 p-6 overflow-auto">
-              {['JPG', 'PNG', 'JPEG', 'HEIC'].includes(selectedDocument.type.toUpperCase()) ? (
-                <div className="flex justify-center">
-                  <img
-                    src={selectedDocument.url}
-                    alt={selectedDocument.name}
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
-                  />
-                </div>
-              ) : selectedDocument.type.toUpperCase() === 'PDF' ? (
-                <div className="w-full h-96 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-4">PDF Preview</p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Click download to view the full PDF document
-                    </p>
-                    <Button
-                      onClick={() => handleDownloadDocument(selectedDocument)}
-                      className="bg-pink-500 hover:bg-pink-600"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download PDF
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Cannot preview this file type</p>
-                  <p className="text-sm text-gray-500 mt-2">Download to view the document</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        // This modal is no longer used for viewing, but can be kept for other purposes or removed.
+        // For now, I'm removing it to simplify the code since handleViewDocument now opens a new tab.
+        <></>
       )}
     </>
   );
-} 
+}

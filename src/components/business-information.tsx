@@ -4,15 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  ArrowLeft, 
-  Save, 
-  Store, 
-  Clock, 
-  Upload, 
-  FileText, 
-  Image as ImageIcon, 
-  X, 
+import {
+  ArrowLeft,
+  Save,
+  Store,
+  Clock,
+  Upload,
+  FileText,
+  Image as ImageIcon,
+  X,
   CheckCircle,
   AlertCircle,
   Loader2,
@@ -23,6 +23,12 @@ import { useState, useRef, useEffect } from "react";
 import { useDocumentData } from "@/lib/document-data-store";
 import DataReviewModal from "./data-review-modal";
 import SuccessToast from "./success-toast";
+
+interface Change {
+  field: string;
+  old: any;
+  new: any;
+}
 
 interface BusinessInfoProps {
   onBack: () => void;
@@ -48,13 +54,13 @@ export default function BusinessInformation({ onBack }: BusinessInfoProps) {
     cuisineCategory: "Malaysian Cuisine",
     ssmNumber: "202301234567",
     merchantId: "MRT-56789",
-    
+
     // Operating Hours
     openingTime: "08:00",
     closingTime: "22:00",
     deliveryRadius: "5",
     serviceTypes: "Dine-in, Takeaway, Delivery",
-    
+
     // System Information
     profileCreatedAt: "2024-01-15"
   });
@@ -72,10 +78,75 @@ export default function BusinessInformation({ onBack }: BusinessInfoProps) {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Correctly reference the public environment variable
+    const id = process.env.NEXT_PUBLIC_USER_ID;
+
+    // This check is now very important. It tells you if your .env.local file is set up correctly.
+    if (!id) {
+      setError("Merchant ID is not configured in environment variables. Check your .env.local file for NEXT_PUBLIC_MERCHANT_ID.");
+      setIsLoading(false);
+      return;
+    }
+
+    async function fetchInfo() {
+      try {
+        const response = await fetch(`/api/merchant/${id}/business-info`);
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(data);
+
+        // --- MAPPING LOGIC GOES HERE ---
+        if (data && data.business_info) {
+          const apiData = data.business_info;
+
+          // Create a new object with the correct camelCase keys
+          const formattedData = {
+            businessId: '',
+            businessName: apiData.business_name || '',
+            supportContact: '',
+            outletName: apiData.outlet_name || '',
+            outletAddress: apiData.outlet_address || '',
+            outletType: apiData.outlet_type,
+            cuisineCategory: apiData.outlet_category,
+            ssmNumber: apiData.ssm_number,
+            merchantId: apiData.merchant_id,
+
+            // Operating Hours
+            openingTime: apiData.open_time ? apiData.open_time.substring(0, 5) : '', // Format HH:mm:ss to HH:mm
+            closingTime: apiData.close_time ? apiData.close_time.substring(0, 5) : '', // Format HH:mm:ss to HH:mm
+            deliveryRadius: apiData.delivery_radius ? apiData.delivery_radius.replace('km', '') : '', // Remove 'km'
+            serviceTypes: apiData.service_type || '',
+
+            // System Information
+            profileCreatedAt: apiData.created_at ? apiData.created_at.substring(0, 10) : ''
+          };
+
+          setFormData(formattedData);
+        }
+        // --- END OF MAPPING LOGIC ---
+
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchInfo();
+  }, []);
 
   // Check for staged data when component mounts or stagedData changes
   useEffect(() => {
-    if (stagedData && pendingNavigation.targetPage === 'business-info') {
+    if (stagedData) {
       setShowReviewModal(true);
     }
   }, [stagedData, pendingNavigation.targetPage]);
@@ -117,7 +188,7 @@ export default function BusinessInformation({ onBack }: BusinessInfoProps) {
     try {
       // Read file content for AI processing
       const fileContent = await readFileContent(file);
-      
+
       // Use AI to extract business information
       const response = await fetch('/api/gemini', {
         method: 'POST',
@@ -137,10 +208,10 @@ export default function BusinessInformation({ onBack }: BusinessInfoProps) {
       }
 
       const data = await response.json();
-      
+
       if (data.isValidJson && data.parsed && data.parsed.extractedData) {
         const { extractedData: aiExtractedData } = data.parsed;
-        
+
         // Filter extracted data to only include fields that exist in our form
         const relevantData: ExtractedData = {};
         Object.keys(formData).forEach(key => {
@@ -170,7 +241,7 @@ export default function BusinessInformation({ onBack }: BusinessInfoProps) {
   const readFileContent = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         const result = e.target?.result;
         if (typeof result === 'string') {
@@ -178,7 +249,7 @@ export default function BusinessInformation({ onBack }: BusinessInfoProps) {
           const base64Data = result.split(',')[1]; // Remove data:image/jpeg;base64, prefix
           const fileType = file.type;
           const fileName = file.name;
-          
+
           // Create a structured content for AI processing
           const aiContent = `File: ${fileName} (${fileType})
 Base64 Data: ${base64Data}
@@ -200,15 +271,15 @@ If this is an SSM (Suruhanjaya Syarikat Malaysia) certificate, please map:
 - "Business ownership" → outletName
 
 Focus on extracting accurate information that can be used to update a merchant profile.`;
-          
+
           resolve(aiContent);
         } else {
           reject(new Error('Failed to read file'));
         }
       };
-      
+
       reader.onerror = () => reject(new Error('Failed to read file'));
-      
+
       // Always read as data URL for images and PDFs
       reader.readAsDataURL(file);
     });
@@ -249,28 +320,37 @@ Focus on extracting accurate information that can be used to update a merchant p
   };
 
   // Smart navigation handlers
-  const handleReviewModalProceed = () => {
+  const handleReviewModalProceed = (selectedChanges: Record<string, Change>) => {
     if (!stagedData) return;
 
-    // Apply the extracted data to the form
+    // Apply ONLY the selected changes to the form data
     const updatedFormData = { ...formData };
-    Object.entries(stagedData.extractedData).forEach(([key, value]) => {
-      if (value && key in updatedFormData) {
-        (updatedFormData as any)[key] = value;
+
+    // --- THIS IS THE KEY CHANGE ---
+    // We now iterate over the 'selectedChanges' object passed from the modal,
+    // NOT the original 'stagedData.extractedData'.
+    Object.entries(selectedChanges).forEach(([key, change]) => {
+      // The 'key' is the field name (e.g., 'businessName')
+      // The 'change' object contains the new value at 'change.new'
+      if (key in updatedFormData) {
+        (updatedFormData as any)[key] = change.new;
       }
     });
 
     setFormData(updatedFormData);
-    
+
     // Clear staged data and close modal
     clearStagedData();
     setShowReviewModal(false);
 
-    // Show beautiful success message
-    setSuccessMessage(`Successfully applied ${Object.keys(stagedData.extractedData).length} change${Object.keys(stagedData.extractedData).length !== 1 ? 's' : ''} from the AI-analyzed document!`);
+    // --- UPDATE THE SUCCESS MESSAGE ---
+    // The success message should also reflect the number of APPLIED changes.
+    const numAppliedChanges = Object.keys(selectedChanges).length;
+    setSuccessMessage(`Successfully applied ${numAppliedChanges} change${numAppliedChanges !== 1 ? 's' : ''} from the AI-analyzed document!`);
     setShowSuccessToast(true);
   };
 
+  // This function can remain the same
   const handleReviewModalCancel = () => {
     clearStagedData();
     setShowReviewModal(false);
@@ -315,7 +395,7 @@ Focus on extracting accurate information that can be used to update a merchant p
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
-          
+
           {/* Upload Data Section */}
           <div className="bg-white rounded-2xl shadow-sm p-8">
             <div className="flex items-center mb-6">
@@ -417,7 +497,7 @@ Focus on extracting accurate information that can be used to update a merchant p
                     <h3 className="font-medium text-green-800">AI Analysis Complete</h3>
                   </div>
                 </div>
-                
+
                 <div className="space-y-3 mb-6">
                   {Object.entries(extractedData).map(([key, value]) => (
                     <div key={key} className="flex justify-between py-2 border-b border-green-200 last:border-b-0">
@@ -456,25 +536,27 @@ Focus on extracting accurate information that can be used to update a merchant p
               <Store className="w-6 h-6 text-pink-500 mr-3" />
               <h2 className="text-2xl font-semibold text-gray-900">Business Details</h2>
             </div>
-            
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Business Name</label>
+              <Input
+                value={formData.businessName}
+                onChange={(e) => handleInputChange('businessName', e.target.value)}
+                placeholder="Enter business name"
+              />
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Business ID</label>
                 <Input
                   value={formData.businessId}
                   onChange={(e) => handleInputChange('businessId', e.target.value)}
                   placeholder="Enter business ID"
                 />
-              </div>
+              </div> */}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Business Name</label>
-                <Input
-                  value={formData.businessName}
-                  onChange={(e) => handleInputChange('businessName', e.target.value)}
-                  placeholder="Enter business name"
-                />
-              </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Outlet Name</label>
@@ -534,7 +616,7 @@ Focus on extracting accurate information that can be used to update a merchant p
                 <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Category</label>
                 <Select value={formData.cuisineCategory} onValueChange={(value) => handleInputChange('cuisineCategory', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select cuisine category" />
+                    <SelectValue placeholder="Select outlet category" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Malaysian Cuisine">Malaysian Cuisine</SelectItem>
@@ -555,7 +637,8 @@ Focus on extracting accurate information that can be used to update a merchant p
                 <Input
                   type="date"
                   value={formData.profileCreatedAt}
-                  onChange={(e) => handleInputChange('profileCreatedAt', e.target.value)}
+                  readOnly // This makes the input non-editable
+                  className="bg-gray-100 cursor-not-allowed"
                 />
               </div>
             </div>
@@ -567,7 +650,7 @@ Focus on extracting accurate information that can be used to update a merchant p
               <Clock className="w-6 h-6 text-pink-500 mr-3" />
               <h2 className="text-2xl font-semibold text-gray-900">Operating Hours & Services</h2>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Opening Time</label>

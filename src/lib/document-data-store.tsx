@@ -4,6 +4,9 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 // Define the types for extracted data
 export interface ExtractedDataItem {
+  new: any;
+  old: any;
+  field: string;
   fieldName: string;
   oldValue: string;
   newValue: string;
@@ -80,24 +83,24 @@ export function useDocumentData() {
 // Helper function to map data types to page names
 export function getPageFromDataType(dataType: string): string {
   const mapping: Record<string, string> = {
-    'Business Information': 'business-info',
-    'Personal Information': 'personal-info',
-    'Bank Information': 'bank-info',
+    'Business Information': 'business-information',
+    'Personal Information': 'personal-information',
+    'Bank Information': 'bank-information',
     'Company Contact': 'company-contact',
-    'Bank Statement': 'bank-info',
-    'Personal ID': 'personal-info',
-    'Business Registration': 'business-info',
+    'Bank Statement': 'bank-information',
+    'Personal ID': 'personal-information',
+    'Business Registration': 'business-information',
   };
   
-  return mapping[dataType] || 'business-info'; // Default to business info
+  return mapping[dataType] || 'business-information'; // Default to business info
 }
 
 // Helper function to get display name from page key
 export function getDisplayNameFromPage(pageKey: string): string {
   const mapping: Record<string, string> = {
-    'business-info': 'Business Information',
-    'personal-info': 'Personal Information',
-    'bank-info': 'Bank Information',
+    'business-information': 'Business Information',
+    'personal-information': 'Personal Information',
+    'bank-information': 'Bank Information',
     'company-contact': 'Company Contact',
   };
   

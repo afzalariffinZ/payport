@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the generative model - using gemini-2.0-flash-exp or fallback to gemini-1.5-flash
-    const model = genAI.getGenerativeModel({ 
+    const model = genAI.getGenerativeModel({
       model: 'gemini-2.0-flash-exp',
       generationConfig: {
         temperature: 0.1, // Lower temperature for more consistent JSON output
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (analysisType === 'document-smart-analysis' && documentContent) {
       // Check if this is an image/PDF document (contains base64 data)
       const isFileUpload = documentContent.includes('Base64 Data:');
-      
+
       if (isFileUpload) {
         fullPrompt = `
 You are an AI system specialized in analyzing business documents from images and PDFs. Extract business information from the provided document.
@@ -130,18 +130,18 @@ If no relevant data found, respond with:
 `;
       }
     } else {
-      // Regular prompt for other requests
+      // THIS IS THE CORRECTED "REGULAR PROMPT" PATH
       fullPrompt = `
-You are an AI assistant helping merchants manage their profile data. You have access to their current data and can suggest updates.
+You are a friendly and helpful AI assistant helping a merchant manage their profile data.
+The user's request, which contains your primary instructions, is: "${prompt}"
 
-${prompt}
+- First, understand the user's intent from the request. Are they making small talk, asking a general question, or requesting a specific data change?
+- If the user is just chatting (e.g., "hello", "how are you"), respond conversationally and naturally. Do NOT immediately try to solve a problem unless they ask.
+- If the user is asking for help or wants to make a change, be professional and helpful. Use the provided "Current merchant data" for context if needed.
+- IMPORTANT: Do NOT mention or request JSON format. Simply have a normal, text-based conversation.
 
-Current merchant data:
+Current merchant data for context (only use if relevant to the user's request):
 ${JSON.stringify(currentData, null, 2)}
-
-${documentContent ? `\nDocument content to analyze:\n${documentContent}` : ''}
-
-Please respond in a helpful and professional manner. If suggesting data changes, use the exact JSON format specified in the instructions.
     `;
     }
 
@@ -177,23 +177,23 @@ Please respond in a helpful and professional manner. If suggesting data changes,
       try {
         // Clean the response text to extract just the JSON
         let cleanedText = text.trim();
-        
+
         // Remove any markdown formatting if present
         if (cleanedText.startsWith('```json')) {
           cleanedText = cleanedText.replace(/```json\s*/, '').replace(/\s*```$/, '');
         } else if (cleanedText.startsWith('```')) {
           cleanedText = cleanedText.replace(/```\s*/, '').replace(/\s*```$/, '');
         }
-        
+
         const parsedResponse = JSON.parse(cleanedText);
         if (parsedResponse.dataType && parsedResponse.extractedData) {
-          return NextResponse.json({ 
+          return NextResponse.json({
             response: cleanedText,
             parsed: parsedResponse,
-            isValidJson: true 
+            isValidJson: true
           });
         } else {
-          return NextResponse.json({ 
+          return NextResponse.json({
             response: text,
             isValidJson: false,
             error: 'AI response missing required fields (dataType, extractedData)'
@@ -203,7 +203,7 @@ Please respond in a helpful and professional manner. If suggesting data changes,
         console.warn('Failed to parse AI response as JSON:', parseError);
         console.warn('Raw AI response:', text);
         // Return with indication that parsing failed
-        return NextResponse.json({ 
+        return NextResponse.json({
           response: text,
           isValidJson: false,
           error: 'AI did not return valid JSON format'

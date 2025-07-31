@@ -8,6 +8,13 @@ import { useDocumentData } from "@/lib/document-data-store";
 import DataReviewModal from "./data-review-modal";
 import SuccessToast from "./success-toast";
 
+interface Change {
+  field: string;
+  old: any;
+  new: any;
+}
+
+
 interface CompanyContactProps {
   onBack: () => void;
 }
@@ -15,9 +22,9 @@ interface CompanyContactProps {
 export default function CompanyContact({ onBack }: CompanyContactProps) {
   const [formData, setFormData] = useState({
     // Contact Information
-    companyEmail: "info@nasilemakbangsar.com",
-    companyPhone: "+60387654321",
-    supportContact: "+60123456789",
+    companyEmail: "placeholder",
+    companyPhone: "+placeholder",
+    supportContact: "+placeholder",
   });
 
   // Smart navigation and document data states
@@ -25,10 +32,60 @@ export default function CompanyContact({ onBack }: CompanyContactProps) {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Correctly reference the public environment variable
+    const id = process.env.NEXT_PUBLIC_USER_ID;
+
+    // This check is now very important. It tells you if your .env.local file is set up correctly.
+    if (!id) {
+      setError("Merchant ID is not configured in environment variables. Check your .env.local file for NEXT_PUBLIC_USER_ID.");
+      setIsLoading(false);
+      return;
+    }
+
+    async function fetchInfo() {
+      try {
+        const response = await fetch(`/api/merchant/${id}/company-contact`);
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(data);
+
+        // --- MAPPING LOGIC GOES HERE ---
+        if (data && data.company_contact) {
+          const apiData = data.company_contact;
+
+          // Create a new object with the correct camelCase keys
+          const formattedData = {
+            companyEmail: apiData.company_email || '',
+            companyPhone: apiData.company_phone || '',
+            supportContact: apiData.support_contact || ''
+          };
+
+          setFormData(formattedData);
+        }
+        // --- END OF MAPPING LOGIC ---
+
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchInfo();
+  }, []);
 
   // Check for staged data when component mounts or stagedData changes
   useEffect(() => {
-    if (stagedData && pendingNavigation.targetPage === 'company-contact') {
+    if (stagedData) {
       setShowReviewModal(true);
     }
   }, [stagedData, pendingNavigation.targetPage]);
@@ -47,28 +104,37 @@ export default function CompanyContact({ onBack }: CompanyContactProps) {
   };
 
   // Smart navigation handlers
-  const handleReviewModalProceed = () => {
+  const handleReviewModalProceed = (selectedChanges: Record<string, Change>) => {
     if (!stagedData) return;
 
-    // Apply the extracted data to the form
+    // Apply ONLY the selected changes to the form data
     const updatedFormData = { ...formData };
-    Object.entries(stagedData.extractedData).forEach(([key, value]) => {
-      if (value && key in updatedFormData) {
-        (updatedFormData as any)[key] = value;
+
+    // --- THIS IS THE KEY CHANGE ---
+    // We now iterate over the 'selectedChanges' object passed from the modal,
+    // NOT the original 'stagedData.extractedData'.
+    Object.entries(selectedChanges).forEach(([key, change]) => {
+      // The 'key' is the field name (e.g., 'businessName')
+      // The 'change' object contains the new value at 'change.new'
+      if (key in updatedFormData) {
+        (updatedFormData as any)[key] = change.new;
       }
     });
 
     setFormData(updatedFormData);
-    
+
     // Clear staged data and close modal
     clearStagedData();
     setShowReviewModal(false);
 
-    // Show beautiful success message
-    setSuccessMessage(`Successfully applied ${Object.keys(stagedData.extractedData).length} change${Object.keys(stagedData.extractedData).length !== 1 ? 's' : ''} from the AI-analyzed document!`);
+    // --- UPDATE THE SUCCESS MESSAGE ---
+    // The success message should also reflect the number of APPLIED changes.
+    const numAppliedChanges = Object.keys(selectedChanges).length;
+    setSuccessMessage(`Successfully applied ${numAppliedChanges} change${numAppliedChanges !== 1 ? 's' : ''} from the AI-analyzed document!`);
     setShowSuccessToast(true);
   };
 
+  // This function can remain the same
   const handleReviewModalCancel = () => {
     clearStagedData();
     setShowReviewModal(false);
@@ -113,14 +179,14 @@ export default function CompanyContact({ onBack }: CompanyContactProps) {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
-          
+
           {/* Contact Information */}
           <div className="bg-white rounded-2xl shadow-sm p-8">
             <div className="flex items-center mb-6">
               <Phone className="w-6 h-6 text-pink-500 mr-3" />
               <h2 className="text-2xl font-semibold text-gray-900">Contact Information</h2>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Company Email</label>
@@ -135,7 +201,7 @@ export default function CompanyContact({ onBack }: CompanyContactProps) {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Company Phone</label>
                 <div className="relative">
@@ -149,7 +215,7 @@ export default function CompanyContact({ onBack }: CompanyContactProps) {
                   />
                 </div>
               </div>
-              
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Support Contact</label>
                 <div className="relative">
@@ -172,7 +238,7 @@ export default function CompanyContact({ onBack }: CompanyContactProps) {
               <MapPin className="w-6 h-6 text-pink-500 mr-3" />
               <h2 className="text-2xl font-semibold text-gray-900">Contact Guidelines</h2>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900">Business Hours Contact</h3>
@@ -191,7 +257,7 @@ export default function CompanyContact({ onBack }: CompanyContactProps) {
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900">Emergency Contact</h3>
                 <div className="p-4 bg-red-50 rounded-lg border border-red-200">

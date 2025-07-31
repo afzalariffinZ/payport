@@ -9,6 +9,13 @@ import { useDocumentData } from "@/lib/document-data-store";
 import DataReviewModal from "./data-review-modal";
 import SuccessToast from "./success-toast";
 
+interface Change {
+  field: string;
+  old: any;
+  new: any;
+}
+
+
 interface PersonalInfoProps {
   onBack: () => void;
 }
@@ -16,7 +23,7 @@ interface PersonalInfoProps {
 export default function PersonalInformation({ onBack }: PersonalInfoProps) {
   const [formData, setFormData] = useState({
     // Owner Information
-    ownerName: "Aisyah Binti Ramli",
+    ownerName: "Aisyah Binti afzal",
     ownerId: "890123456789",
     dateOfBirth: "1985-06-15",
     nationality: "Malaysian",
@@ -24,6 +31,10 @@ export default function PersonalInformation({ onBack }: PersonalInfoProps) {
     ownerPhone: "+60123456789",
     ownerPosition: "Owner/Manager",
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);;
+
+  
 
   // Smart navigation and document data states
   const { stagedData, clearStagedData, pendingNavigation } = useDocumentData();
@@ -33,7 +44,8 @@ export default function PersonalInformation({ onBack }: PersonalInfoProps) {
 
   // Check for staged data when component mounts or stagedData changes
   useEffect(() => {
-    if (stagedData && pendingNavigation.targetPage === 'personal-info') {
+    console.log('pendingNavigation.targetPage', pendingNavigation.targetPage);
+    if (stagedData) {
       setShowReviewModal(true);
     }
   }, [stagedData, pendingNavigation.targetPage]);
@@ -45,6 +57,58 @@ export default function PersonalInformation({ onBack }: PersonalInfoProps) {
     }));
   };
 
+  useEffect(() => {
+    // Correctly reference the public environment variable
+    const id = process.env.NEXT_PUBLIC_USER_ID;
+    
+    // This check is now very important. It tells you if your .env.local file is set up correctly.
+    if (!id) {
+        setError("Merchant ID is not configured in environment variables. Check your .env.local file for NEXT_PUBLIC_USER_ID.");
+        setIsLoading(false);
+        return;
+    }
+  
+    async function fetchInfo() {
+      try {
+        const response = await fetch(`/api/merchant/${id}/personal-info`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // --- MAPPING LOGIC GOES HERE ---
+        if (data && data.personal_info) {
+          const apiData = data.personal_info;
+
+          // Create a new object with the correct camelCase keys
+          const formattedData = {
+            ownerName: apiData.owner_name,
+            ownerId: apiData.owner_id,
+            dateOfBirth: apiData.dob, // Make sure 'dob' matches your DB column
+            nationality: apiData.nationality,
+            ownerEmail: apiData.owner_email,
+            ownerPhone: apiData.owner_phone,
+            // You might not have this field in the DB, so handle it gracefully
+            ownerPosition: apiData.owner_position || 'Owner/Manager' 
+          };
+
+          setFormData(formattedData);
+        }
+        // --- END OF MAPPING LOGIC ---
+
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchInfo();
+  }, []);
+
   const handleSave = () => {
     console.log("Saving personal information:", formData);
     // Here you would typically save to your backend
@@ -52,28 +116,37 @@ export default function PersonalInformation({ onBack }: PersonalInfoProps) {
   };
 
   // Smart navigation handlers
-  const handleReviewModalProceed = () => {
+const handleReviewModalProceed = (selectedChanges: Record<string, Change>) => {
     if (!stagedData) return;
 
-    // Apply the extracted data to the form
+    // Apply ONLY the selected changes to the form data
     const updatedFormData = { ...formData };
-    Object.entries(stagedData.extractedData).forEach(([key, value]) => {
-      if (value && key in updatedFormData) {
-        (updatedFormData as any)[key] = value;
+
+    // --- THIS IS THE KEY CHANGE ---
+    // We now iterate over the 'selectedChanges' object passed from the modal,
+    // NOT the original 'stagedData.extractedData'.
+    Object.entries(selectedChanges).forEach(([key, change]) => {
+      // The 'key' is the field name (e.g., 'businessName')
+      // The 'change' object contains the new value at 'change.new'
+      if (key in updatedFormData) {
+        (updatedFormData as any)[key] = change.new;
       }
     });
 
     setFormData(updatedFormData);
-    
+
     // Clear staged data and close modal
     clearStagedData();
     setShowReviewModal(false);
 
-    // Show beautiful success message
-    setSuccessMessage(`Successfully applied ${Object.keys(stagedData.extractedData).length} change${Object.keys(stagedData.extractedData).length !== 1 ? 's' : ''} from the AI-analyzed document!`);
+    // --- UPDATE THE SUCCESS MESSAGE ---
+    // The success message should also reflect the number of APPLIED changes.
+    const numAppliedChanges = Object.keys(selectedChanges).length;
+    setSuccessMessage(`Successfully applied ${numAppliedChanges} change${numAppliedChanges !== 1 ? 's' : ''} from the AI-analyzed document!`);
     setShowSuccessToast(true);
   };
 
+  // This function can remain the same
   const handleReviewModalCancel = () => {
     clearStagedData();
     setShowReviewModal(false);

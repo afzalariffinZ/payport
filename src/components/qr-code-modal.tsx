@@ -15,6 +15,9 @@ export default function QRCodeModal({ isOpen, onClose }: QRCodeModalProps) {
   const [countdown, setCountdown] = useState(60);
   const [qrKey, setQrKey] = useState(Date.now()); // force re-render QR when regenerating
 
+  // This is the value you want the QR code to contain
+  const qrValue = "ad4964f4-4caa-41bd-ae8e-6e8a6c629c0e";
+
   // Reset timer when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -34,21 +37,10 @@ export default function QRCodeModal({ isOpen, onClose }: QRCodeModalProps) {
   }, [isOpen]);
 
   const regenerateQR = () => {
-    // Here you can fetch a new QR value from backend. For demo we'll just bump the timestamp.
+    // For demo purposes, we'll just bump the timestamp to force a re-render.
+    // In a real app, you might fetch a new unique value from your backend.
     setQrKey(Date.now());
   };
-
-  // Merchant information to encode in QR code
-  const merchantData = {
-    businessName: "Nasi Lemak Bangsar",
-    merchantId: "MRT-56789",
-    contact: "+60387654321",
-    email: "info@nasilemakbangsar.com",
-    address: "18 Jalan Telawi, Bangsar, 59100 Kuala Lumpur",
-    website: "https://payportreal.com/merchant/nasi-lemak-bangsar"
-  };
-
-  const qrValue = JSON.stringify({ ...merchantData, ts: qrKey });
 
   const handleDownload = () => {
     const svgElement = document.getElementById("qr-code-svg");
@@ -66,7 +58,7 @@ export default function QRCodeModal({ isOpen, onClose }: QRCodeModalProps) {
         const pngFile = canvas.toDataURL("image/png");
         
         const downloadLink = document.createElement("a");
-        downloadLink.download = "nasi-lemak-bangsar-qr.png";
+        downloadLink.download = "merchant-qr-code.png";
         downloadLink.href = pngFile;
         downloadLink.click();
       };
@@ -75,9 +67,9 @@ export default function QRCodeModal({ isOpen, onClose }: QRCodeModalProps) {
     }
   };
 
-  const handleCopyLink = async () => {
+  const handleCopyValue = async () => {
     try {
-      await navigator.clipboard.writeText(merchantData.website);
+      await navigator.clipboard.writeText(qrValue);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -88,12 +80,12 @@ export default function QRCodeModal({ isOpen, onClose }: QRCodeModalProps) {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: merchantData.businessName,
-        text: `Visit ${merchantData.businessName} - Authentic Malaysian Cuisine`,
-        url: merchantData.website,
+        title: "Merchant QR Code",
+        text: `QR Code Value: ${qrValue}`,
+        url: window.location.href, // You might want to share a relevant URL
       });
     } else {
-      handleCopyLink();
+      handleCopyValue();
     }
   };
 
@@ -106,7 +98,7 @@ export default function QRCodeModal({ isOpen, onClose }: QRCodeModalProps) {
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Merchant QR Code</h2>
-            <p className="text-sm text-gray-600">Scan to view merchant profile</p>
+            <p className="text-sm text-gray-600">Scan to get the unique ID</p>
           </div>
           <button
             onClick={onClose}
@@ -132,18 +124,6 @@ export default function QRCodeModal({ isOpen, onClose }: QRCodeModalProps) {
           {/* Countdown */}
           <p className={`mt-4 text-sm font-semibold ${countdown <= 10 ? 'text-red-600' : 'text-green-600'}`}>Regenerates in {countdown}s</p>
           
-          {/* Business Info */}
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {merchantData.businessName}
-            </h3>
-            <p className="text-sm text-gray-600 mb-1">
-              Merchant ID: {merchantData.merchantId}
-            </p>
-            <p className="text-sm text-gray-600">
-              {merchantData.contact}
-            </p>
-          </div>
         </div>
 
         {/* Actions */}
@@ -168,7 +148,7 @@ export default function QRCodeModal({ isOpen, onClose }: QRCodeModalProps) {
             </Button>
             
             <Button
-              onClick={handleCopyLink}
+              onClick={handleCopyValue}
               variant="outline"
               className="flex flex-col items-center py-4 h-auto"
             >
@@ -184,20 +164,7 @@ export default function QRCodeModal({ isOpen, onClose }: QRCodeModalProps) {
             Close
           </Button>
         </div>
-
-        {/* QR Code Info */}
-        <div className="px-6 pb-6">
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-            <h4 className="text-sm font-semibold text-blue-900 mb-2">QR Code Contains:</h4>
-            <ul className="text-xs text-blue-700 space-y-1">
-              <li>• Business name and contact information</li>
-              <li>• Merchant ID for verification</li>
-              <li>• Direct link to merchant profile</li>
-              <li>• Address and email details</li>
-            </ul>
-          </div>
-        </div>
       </div>
     </div>
   );
-} 
+}
