@@ -17,13 +17,13 @@ export default function Home() {
     {
       icon: Zap,
       title: "One Click. Everywhere.",
-      description: "Register once, conquer every platform. Grab, Foodpanda, Shopee—all with a single tap. Because your time is worth more than paperwork.",
+      description: "Register once, conquer every platform. Grab, Foodpanda, Shopee all with a single tap. Because your time is worth more than paperwork.",
       color: "from-blue-500 to-purple-600"
     },
     {
       icon: Edit3,
       title: "AI That Gets You.",
-      description: "Your business, your way. Our AI doesn't just edit—it understands. Change menus, update photos, manage data. All through conversation.",
+      description: "Your business, your way. Our AI doesn't just edit it understands. Change menus, update photos, manage data. All through conversation.",
       color: "from-pink-500 to-rose-600"
     },
     {
@@ -35,7 +35,7 @@ export default function Home() {
     {
       icon: TrendingUp,
       title: "Opportunities Find You.",
-      description: "Loans. Investments. Growth. We don't wait for you to ask—we bring opportunities to your doorstep. Proactive. Personal. Powerful.",
+      description: "Loans. Investments. Growth. We don't wait for you to ask we bring opportunities to your doorstep. Proactive. Personal. Powerful.",
       color: "from-orange-500 to-red-600"
     },
     {
@@ -87,7 +87,7 @@ export default function Home() {
         <div className="w-full max-w-4xl flex flex-col items-center">
           <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-4 text-center leading-tight">Think Different. Sell Smarter.</h1>
           <p className="text-lg md:text-xl text-gray-600 text-center mb-10 max-w-2xl">
-            PayPort doesn't just manage your business—it revolutionizes it. With AI that thinks like you do, we're not building another platform. We're building the future of commerce. Simple. Powerful. Magical.
+            PayPort doesn't just manage your business it revolutionizes it. With AI that thinks like you do, we're not building another platform. We're building the future of commerce. Simple. Powerful. Magical.
           </p>
 
           {/* Bento Boxes */}
