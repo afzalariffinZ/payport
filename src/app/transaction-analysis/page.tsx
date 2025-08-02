@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BarChart3, Clock, TrendingUp, AlertCircle } from "lucide-react";
+import { ArrowLeft, BarChart3 } from "lucide-react";
+import TransactionChat from "@/components/transaction-chat";
 
 export default function TransactionAnalysisPage() {
   const router = useRouter();
@@ -9,6 +10,20 @@ export default function TransactionAnalysisPage() {
   const handleBack = () => {
     router.push("/dashboard");
   };
+
+  // Dummy transaction data – in real app fetch from API
+  const dummyTx = [
+    { date: "2025-08-01", amount: 120, category: "Food" },
+    { date: "2025-08-01", amount: 60, category: "Drinks" },
+    { date: "2025-08-02", amount: 200, category: "Food" },
+    { date: "2025-08-02", amount: 40, category: "Dessert" },
+    { date: "2025-08-03", amount: 180, category: "Food" },
+    { date: "2025-08-03", amount: 90, category: "Drinks" },
+    { date: "2025-08-04", amount: 75, category: "Drinks" },
+    { date: "2025-08-04", amount: 50, category: "Dessert" },
+    { date: "2025-08-05", amount: 220, category: "Food" },
+    { date: "2025-08-05", amount: 110, category: "Drinks" },
+  ];
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -39,48 +54,8 @@ export default function TransactionAnalysisPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Coming Soon Section */}
-        <div className="flex flex-col items-center justify-center min-h-[500px]">
-          <div className="text-center max-w-md">
-            <div className="w-24 h-24 bg-gradient-to-br from-pink-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-8">
-              <BarChart3 className="w-12 h-12 text-white" />
-            </div>
-            
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Coming Soon!</h2>
-            <p className="text-lg text-gray-600 mb-6">
-              We're building powerful transaction analytics to help you understand your business better.
-            </p>
-            
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">What to expect:</h3>
-              <div className="space-y-3 text-left">
-                <div className="flex items-center space-x-3">
-                  <TrendingUp className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span className="text-gray-700">Real-time sales analytics and trends</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <BarChart3 className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                  <span className="text-gray-700">Detailed transaction reports</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Clock className="w-5 h-5 text-purple-500 flex-shrink-0" />
-                  <span className="text-gray-700">Peak hours and customer insights</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                  <span className="text-gray-700">Smart alerts and recommendations</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-pink-50 border border-pink-200 rounded-xl p-4">
-              <p className="text-pink-800 font-medium">
-                📧 Want to be notified when this feature launches? We'll update you automatically!
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <TransactionChat />
       </div>
     </main>
   );

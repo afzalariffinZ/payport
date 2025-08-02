@@ -162,9 +162,20 @@ export default function ConnectedAppsPage() {
                   </div>
                 </div>
                 
-                <button className="w-full bg-pink-500 hover:bg-pink-600 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
-                  Connect Now
-                </button>
+                {app.id === 'grab' ? (
+                  <a
+                    href="https://payport-paylord.onrender.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full text-center bg-pink-500 hover:bg-pink-600 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Connect Now
+                  </a>
+                ) : (
+                  <button className="w-full bg-pink-500 hover:bg-pink-600 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
+                    Connect Now
+                  </button>
+                )}
               </div>
             ))}
           </div>

@@ -69,7 +69,7 @@ export default function AIChatbot() {
     const [messages, setMessages] = useState<Message[]>([
         {
             id: '1',
-            content: "Hi! I'm your AI assistant. I can help you in English and Malay:\n\n🔄 **Update your data** - Ask me to change information or upload documents\n🧭 **Navigate pages** - Say 'take me to dashboard' or 'bawa saya ke maklumat perniagaan'\n📄 **Analyze documents** - Upload files and I'll extract data\n\n**Try saying:**\n• \"Show me business information\" / \"Tunjukkan maklumat perniagaan\"\n• \"I want to see my profile\" / \"Saya nak tengok profil saya\"\n\nWhat would you like to do?",
+            content: "Hi! I'm your AI assistant – how can I help you today?",
             sender: 'ai',
             timestamp: new Date(),
             type: 'text'
