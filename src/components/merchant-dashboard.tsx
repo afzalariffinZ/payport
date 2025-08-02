@@ -22,6 +22,7 @@ import QRCodeModal from "./qr-code-modal";
 import LanguageToggle from "./language-toggle";
 import Link from "next/link";
 
+
 interface MenuItem {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
@@ -96,7 +97,7 @@ export default function MerchantDashboard() {
             {/* Header/Navigation Bar */}
             <header className="bg-white shadow-sm border-b border-gray-200">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between fade-in-up" style={{animationDelay:'100ms'}}>
                   <div className="flex items-center space-x-4">
                     <div className="w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center">
                       <User className="w-6 h-6 text-white" />
@@ -154,19 +155,20 @@ export default function MerchantDashboard() {
                       {menuItems.map((item, index) => {
                         const IconComponent = item.icon;
                         return (
-                          <Link
-                            key={index}
-                            href={item.route}
-                            className="group flex flex-col items-center justify-center p-6 bg-gray-50 hover:bg-pink-50 rounded-xl transition-all duration-200 min-h-[140px] hover:shadow-md hover:scale-105 border border-transparent hover:border-pink-200"
-                            aria-label={`Navigate to ${item.label}`}
-                          >
-                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm group-hover:shadow-md transition-shadow duration-200">
-                              <IconComponent className="w-6 h-6 text-gray-700 group-hover:text-pink-600 transition-colors duration-200" />
-                            </div>
-                            <span className="text-sm font-medium text-gray-900 text-center leading-snug group-hover:text-pink-700 transition-colors duration-200">
-                              {item.label}
-                            </span>
-                          </Link>
+                          <div key={index} className="fade-in-up" style={{animationDelay:`${150+index*70}ms`}}>
+                            <Link
+                              href={item.route}
+                              className="group flex flex-col items-center justify-center p-6 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-pink-50 hover:to-pink-100 rounded-xl transition-all duration-300 min-h-[140px] border border-gray-200 hover:border-pink-300 hover:scale-105"
+                              aria-label={`Navigate to ${item.label}`}
+                            >
+                              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-4 transition-all duration-300">
+                                <IconComponent className="w-6 h-6 text-gray-700 group-hover:text-pink-600 transition-colors duration-300" />
+                              </div>
+                              <span className="text-sm font-medium text-gray-900 text-center leading-snug group-hover:text-pink-700 transition-colors duration-300">
+                                {item.label}
+                              </span>
+                            </Link>
+                          </div>
                         );
                       })}
                     </div>

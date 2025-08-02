@@ -865,9 +865,7 @@ Focus on extracting accurate information that can be used to update a merchant p
                                                                     <ArrowRight className="w-6 h-6 text-white" />
                                                                 </div>
                                                                 <h4 className="font-semibold text-gray-900 mb-2">Ready to update your information?</h4>
-                                                                <p className="text-sm text-gray-600">
-                                                                    I found {Object.keys(message.navigationData.extractedData).length} field{Object.keys(message.navigationData.extractedData).length !== 1 ? 's' : ''} to update
-                                                                </p>
+
                                                             </div>
 
                                                             <div className="flex flex-col space-y-3">

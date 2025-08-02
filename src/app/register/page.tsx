@@ -35,7 +35,7 @@ export default function RegisterPage() {
   // Step 0: Email/Password submit
   const handleEmailPasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
+    if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) {
       alert("Passwords don't match");
       return;
     }
@@ -119,7 +119,6 @@ export default function RegisterPage() {
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     placeholder="Enter your email"
                     className="pl-10 h-12"
-                    required
                   />
                 </div>
               </div>
@@ -138,7 +137,6 @@ export default function RegisterPage() {
                     onChange={(e) => handleInputChange("password", e.target.value)}
                     placeholder="Create a password"
                     className="pl-10 pr-10 h-12"
-                    required
                   />
                   <button
                     type="button"
@@ -164,7 +162,6 @@ export default function RegisterPage() {
                     onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                     placeholder="Confirm your password"
                     className="pl-10 pr-10 h-12"
-                    required
                   />
                   <button
                     type="button"

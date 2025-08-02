@@ -49,9 +49,9 @@ export default function TransactionChat() {
 
   return (
     <div className="flex flex-col h-[80vh] border rounded-2xl bg-white shadow-sm">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {messages.map(m=> (
-          <div key={m.id} className={`flex ${m.sender==='user'?'justify-end':'justify-start'}`}>
+          <div key={m.id} className={`flex ${m.sender==='user'?'justify-end':'justify-start'} animate-fadeIn`}>
             {m.sender==='ai' ? (
               (()=>{
                 let txt=m.content;
@@ -62,24 +62,34 @@ export default function TransactionChat() {
                   .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
                   .replace(/\n/g,'<br/>');
                 return (
-                  <div className="bg-gray-100 text-gray-900 rounded-lg px-4 py-2 max-w-[70%]">
+                  <div className="bg-gray-100 text-gray-900 rounded-lg px-4 py-2 shadow-md max-w-[70%]">
                     <div dangerouslySetInnerHTML={{__html:html}} />
                     {img && <img src={img} alt="graph" className="mt-3 rounded-lg border"/>}
                   </div>
                 );
               })()
             ) : (
-              <div className="rounded-lg px-4 py-2 max-w-[70%] bg-pink-600 text-white">{m.content}</div>
+              <div className="rounded-lg px-4 py-2 max-w-[70%] bg-gradient-to-br from-pink-600 to-pink-500 text-white shadow-md">{m.content}</div>
             )}
           </div>
         ))}
-        {loading&&<p className="text-sm text-gray-500">AI is typing…</p>}
+        {loading&&(
+          <div className="flex items-center space-x-2 animate-fadeIn">
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+          </div>
+        )}
         <div ref={endRef}/>
       </div>
-      <div className="border-t p-4 space-x-2 flex">
-        <Textarea className="flex-1 resize-none" rows={2} placeholder="Ask anything about your transactions…" value={input} onKeyDown={onKey} onChange={e=>setInput(e.target.value)}/>
-        <Button disabled={!input.trim()||loading} onClick={send} className="bg-pink-600 hover:bg-pink-700 text-white"><Send className="w-4 h-4"/></Button>
+      <div className="border-t p-4 space-x-3 flex bg-white/75 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+        <Textarea className="flex-1 resize-none rounded-xl border-gray-300 focus:ring-2 focus:ring-pink-500" rows={2} placeholder="Ask anything about your transactions…" value={input} onKeyDown={onKey} onChange={e=>setInput(e.target.value)}/>
+        <Button disabled={!input.trim()||loading} onClick={send} className="bg-pink-600 hover:bg-pink-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-transform hover:scale-105 disabled:opacity-50"><Send className="w-5 h-5"/></Button>
       </div>
+      <style jsx>{`
+        @keyframes fadeIn { from { opacity:0; transform:translateY(4px);} to {opacity:1; transform:translateY(0);} }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+      `}</style>
     </div>
   );
 } 

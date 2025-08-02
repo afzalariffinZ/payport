@@ -123,7 +123,7 @@ export default function DataReviewModal({
               Review Changes
             </h3>
             <p className="text-gray-600">
-              {Object.keys(changes).length} field{Object.keys(changes).length !== 1 ? 's' : ''} can be updated. Deselect any changes you want to ignore.
+              Review the changes below and deselect any you want to ignore.
             </p>
           </div>
 

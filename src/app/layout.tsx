@@ -30,6 +30,12 @@ function ClientLayout({ children }: { children: React.ReactNode }) {
   // Get the navigation state and the setter function from your context
   const { pendingNavigation, setPendingNavigation } = useDocumentData();
 
+  // Check if we're on register or login pages to hide notifications
+  const isAuthPage = typeof window !== 'undefined' && (
+    window.location.pathname === '/register' || 
+    window.location.pathname === '/login'
+  );
+
   useEffect(() => {
     // Check if a navigation request is pending
     if (pendingNavigation && pendingNavigation.targetPage) {
@@ -48,10 +54,12 @@ function ClientLayout({ children }: { children: React.ReactNode }) {
   // This component renders the page content and the chatbot
   return (
     <>
-      {/* Fixed Notifications Icon */}
-      <div className="fixed top-4 right-4 z-50">
-        <Notifications />
-      </div>
+      {/* Fixed Notifications Icon - only show on non-auth pages */}
+      {!isAuthPage && (
+        <div className="fixed top-4 right-4 z-50">
+          <Notifications />
+        </div>
+      )}
       {children}
       <AIChatbot />
     </>
