@@ -90,6 +90,7 @@ export function getPageFromDataType(dataType: string): string {
     'Bank Statement': 'bank-information',
     'Personal ID': 'personal-information',
     'Business Registration': 'business-information',
+    'Food Menu': 'food-menu',
   };
   
   return mapping[dataType] || 'business-information'; // Default to business info
@@ -102,6 +103,7 @@ export function getDisplayNameFromPage(pageKey: string): string {
     'personal-information': 'Personal Information',
     'bank-information': 'Bank Information',
     'company-contact': 'Company Contact',
+    'food-menu': 'Food Menu',
   };
   
   return mapping[pageKey] || 'Business Information';

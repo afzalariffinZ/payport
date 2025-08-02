@@ -455,6 +455,20 @@ Your goal is to have a natural, human-like conversation.
             setMessages(prev => [...prev, aiMessage]);
         } else {
             // This might be a data change request - use smart analysis
+            // Get menu data if available for food menu requests
+            let enhancedCurrentData = profileData;
+            try {
+                const menuItems = localStorage.getItem('currentMenuItems');
+                if (menuItems) {
+                    enhancedCurrentData = {
+                        ...profileData,
+                        menuItems: JSON.parse(menuItems)
+                    } as any;
+                }
+            } catch (e) {
+                // Ignore localStorage errors
+            }
+
             const response = await fetch('/api/gemini', {
                 method: 'POST',
                 headers: {
@@ -463,7 +477,7 @@ Your goal is to have a natural, human-like conversation.
                 body: JSON.stringify({
                     prompt: `User wants to: "${prompt}". Determine what data they want to change and which page category it belongs to.`,
                     documentContent: `User request: ${prompt}. Extract the field changes they want to make from this request.`,
-                    currentData: profileData,
+                    currentData: enhancedCurrentData,
                     analysisType: 'document-smart-analysis'
                 }),
             });

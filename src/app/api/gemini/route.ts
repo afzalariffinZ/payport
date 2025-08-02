@@ -44,6 +44,8 @@ Available pages and their purposes:
 - "food-menu" - Menu items and food-related settings / Menu makanan
 - "documents" - Document storage and management / Penyimpanan dokumen
 - "loan-investment-incentive" - Financial opportunities, loans, investments / Pinjaman dan pelaburan
+- "transaction-analysis" - Transaction reports and analytics / Analisis transaksi
+- "connected-apps" - App integrations and connections / Aplikasi bersambung
 
 CRITICAL REQUIREMENTS:
 1. You MUST respond with ONLY a JSON object - no other text, explanations, or formatting
@@ -61,6 +63,8 @@ ENGLISH:
 - "menu", "food", "items", "dishes", "restaurant menu" → food-menu
 - "documents", "files", "papers", "storage", "my documents" → documents
 - "loan", "money", "investment", "finance", "funding", "financial help" → loan-investment-incentive
+- "transaction", "analysis", "reports", "analytics", "sales data" → transaction-analysis
+- "apps", "connections", "integrations", "connected apps", "platforms" → connected-apps
 
 MALAY:
 - "dashboard", "papan pemuka", "halaman utama", "laman utama" → dashboard
@@ -71,6 +75,8 @@ MALAY:
 - "menu", "makanan", "hidangan", "senarai makanan" → food-menu
 - "dokumen", "fail", "kertas", "simpanan", "dokumen saya" → documents
 - "pinjaman", "wang", "pelaburan", "kewangan", "bantuan kewangan" → loan-investment-incentive
+- "transaksi", "analisis", "laporan", "analitik", "data jualan" → transaction-analysis
+- "aplikasi", "sambungan", "integrasi", "aplikasi bersambung", "platform" → connected-apps
 
 NATURAL LANGUAGE PATTERNS:
 - "I want to see..." / "Saya nak tengok..."
@@ -126,6 +132,7 @@ Identify the document category:
 - "Personal Information" (ID cards, personal documents)
 - "Bank Information" (bank statements, account details)
 - "Company Contact" (business cards, contact information)
+- "Food Menu" (menu items, dishes, prices, descriptions)
 - "Unknown" (if no clear business information is visible)
 
 Required response format (respond with ONLY this JSON structure):
@@ -168,11 +175,32 @@ ${JSON.stringify(currentData, null, 2)}
 If this is a user text request (not a document), extract the field changes they want to make.
 For example: "update business name to X" -> extract businessName: "X"
 
+For Food Menu requests, use this format:
+- "change item 0 name to X" -> extract "0_name": "X"
+- "update item 1 price to 15.50" -> extract "1_price": 15.50
+- "modify item 2 description to Y" -> extract "2_description": "Y"
+- Menu items are indexed starting from 0
+
+IMPORTANT: Users can reference menu items by NAME instead of index numbers.
+When they say "change Nasi Lemak Rendang Daging price to 10", you need to:
+1. Find which menu item has that name in the current data
+2. Use the correct index in your response
+3. Extract the field they want to change
+
+Examples:
+- "rename Nasi Lemak Rendang Daging to Premium Rendang" -> find item index, extract "INDEX_name": "Premium Rendang"
+- "change Teh Ais Kaw price to 3.50" -> find item index, extract "INDEX_price": 3.50
+- "update Kuih-Muih description to New description" -> find item index, extract "INDEX_description": "New description"
+
+Current menu items for reference:
+${JSON.stringify(currentData, null, 2)}
+
 Identify the data category from these options:
 - "Business Information" (business name, SSM number, address, outlet info)
 - "Personal Information" (owner name, ID, email, phone, personal details)
 - "Bank Information" (bank name, account number, account holder)
 - "Company Contact" (company email, phone, support contact)
+- "Food Menu" (menu items, dishes, prices, descriptions)
 - "Unknown" (if no clear category matches)
 
 Extract data that matches field names in the current merchant data structure.

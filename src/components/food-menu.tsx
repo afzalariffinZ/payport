@@ -15,7 +15,10 @@ import {
   Camera,
   Trash2
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDocumentData } from "@/lib/document-data-store";
+import SuccessToast from "./success-toast";
+import DataReviewModal from "./data-review-modal";
 
 
 interface AddOn {
@@ -39,6 +42,12 @@ interface FoodMenuProps {
 export default function FoodMenu({ onBack }: FoodMenuProps) {
   const [editingItem, setEditingItem] = useState<number | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+
+  // AI smart navigation & staged data integration
+  const { stagedData, clearStagedData } = useDocumentData();
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   // Menu data from the provided JSON
   const [menuItems, setMenuItems] = useState<MenuItem[]>([
@@ -101,6 +110,75 @@ export default function FoodMenu({ onBack }: FoodMenuProps) {
       ]
     }
   ]);
+
+  // Apply staged AI changes when available
+  useEffect(() => {
+    if (stagedData && stagedData.dataType === "Food Menu") {
+      // Generate changes object for the modal
+      const changes: Record<string, any> = {};
+      Object.entries(stagedData.extractedData).forEach(([key, newValue]) => {
+        const match = key.match(/^(\d+)_(.+)$/);
+        if (!match) return;
+        const index = parseInt(match[1], 10);
+        const field = match[2];
+        if (menuItems[index] && field in menuItems[index]) {
+          const oldValue = (menuItems[index] as any)[field];
+          changes[key] = {
+            field: `Item ${index} - ${field.charAt(0).toUpperCase() + field.slice(1)}`,
+            old: oldValue,
+            new: newValue
+          };
+        }
+      });
+      
+      // Update staged data with changes
+      if (Object.keys(changes).length > 0) {
+        stagedData.changes = changes;
+      }
+      
+      setShowReviewModal(true);
+    }
+  }, [stagedData]);
+
+  // Store menu data globally for AI access
+  useEffect(() => {
+    // Store current menu items in localStorage for AI to reference
+    localStorage.setItem('currentMenuItems', JSON.stringify(menuItems));
+  }, [menuItems]);
+
+  // Handle review modal confirmation
+  const handleReviewModalProceed = (selectedChanges: Record<string, any>) => {
+    if (!stagedData) return;
+
+    const updatedItems = [...menuItems];
+    let applied = 0;
+
+    Object.entries(selectedChanges).forEach(([key, change]) => {
+      const match = key.match(/^(\d+)_(.+)$/);
+      if (!match) return;
+      const index = parseInt(match[1], 10);
+      const field = match[2];
+      if (updatedItems[index] && field in updatedItems[index]) {
+        // @ts-ignore – dynamic field assignment
+        updatedItems[index][field as keyof MenuItem] = change.new;
+        applied += 1;
+      }
+    });
+
+    if (applied > 0) {
+      setMenuItems(updatedItems);
+      setSuccessMessage(`Applied ${applied} change${applied !== 1 ? "s" : ""} from AI assistant.`);
+      setShowSuccessToast(true);
+    }
+
+    clearStagedData();
+    setShowReviewModal(false);
+  };
+
+  const handleReviewModalCancel = () => {
+    clearStagedData();
+    setShowReviewModal(false);
+  };
 
   const [newItem, setNewItem] = useState<MenuItem>({
     name: "",
@@ -168,6 +246,7 @@ export default function FoodMenu({ onBack }: FoodMenuProps) {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
@@ -282,7 +361,28 @@ export default function FoodMenu({ onBack }: FoodMenuProps) {
           </div>
         )}
       </main>
+
+      {/* Success Toast for AI-applied changes */}
+      <SuccessToast
+        isVisible={showSuccessToast}
+        message={successMessage}
+        onClose={() => setShowSuccessToast(false)}
+      />
+
+      {/* Data Review Modal */}
+      {showReviewModal && stagedData && (
+        <DataReviewModal
+          isOpen={showReviewModal}
+          onClose={handleReviewModalCancel}
+          onProceed={handleReviewModalProceed}
+          documentData={stagedData}
+          pageTitle="Food Menu"
+          currentData={{}}
+        />
+      )}
+
     </div>
+    </>
   );
 }
 
