@@ -7,7 +7,7 @@ export default function CompanyContactPage() {
   const router = useRouter();
 
   const handleBack = () => {
-    router.push("/");
+    router.push("/dashboard");
   };
 
   return <CompanyContact onBack={handleBack} />;

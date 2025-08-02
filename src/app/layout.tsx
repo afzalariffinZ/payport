@@ -10,6 +10,8 @@ import { DocumentDataProvider, useDocumentData } from "@/lib/document-data-store
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AIChatbot from "@/components/ai-chatbot";
+import Notifications from "@/components/notifications";
+import { LanguageProvider } from "@/lib/language-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,6 +48,10 @@ function ClientLayout({ children }: { children: React.ReactNode }) {
   // This component renders the page content and the chatbot
   return (
     <>
+      {/* Fixed Notifications Icon */}
+      <div className="fixed top-4 right-4 z-50">
+        <Notifications />
+      </div>
       {children}
       <AIChatbot />
     </>
@@ -71,11 +77,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}
       >
         {/* The Provider wraps the new ClientLayout */}
-        <DocumentDataProvider>
-          <ClientLayout>
-            {children}
-          </ClientLayout>
-        </DocumentDataProvider>
+        <LanguageProvider>
+          <DocumentDataProvider>
+            <ClientLayout>
+              {children}
+            </ClientLayout>
+          </DocumentDataProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

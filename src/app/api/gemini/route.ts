@@ -28,8 +28,73 @@ export async function POST(request: NextRequest) {
 
     let fullPrompt;
 
+    // Handle navigation requests
+    if (analysisType === 'navigation-request') {
+      fullPrompt = `
+You are an AI navigation assistant for a merchant dashboard application. Analyze the user's request in both English and Malay to determine which page they want to navigate to.
+
+User request: "${prompt}"
+
+Available pages and their purposes:
+- "dashboard" - Main dashboard overview / Papan pemuka utama
+- "personal-information" - Owner/personal details, ID, email, phone / Maklumat peribadi pemilik
+- "business-information" - Business name, SSM, address, outlet details / Maklumat perniagaan
+- "company-contact" - Company email, phone, support contact / Hubungan syarikat
+- "bank-information" - Bank details, account information / Maklumat bank
+- "food-menu" - Menu items and food-related settings / Menu makanan
+- "documents" - Document storage and management / Penyimpanan dokumen
+- "loan-investment-incentive" - Financial opportunities, loans, investments / Pinjaman dan pelaburan
+
+CRITICAL REQUIREMENTS:
+1. You MUST respond with ONLY a JSON object - no other text, explanations, or formatting
+2. The JSON must have exactly two keys: "targetPage" and "confidence"
+3. Do not use markdown code blocks, do not add explanations
+
+Analyze the user's request in natural language (English/Malay) and determine the most appropriate page. Look for keywords and natural expressions like:
+
+ENGLISH:
+- "dashboard", "home", "main page", "overview" → dashboard
+- "personal", "profile", "owner info", "my details", "about me" → personal-information
+- "business", "company details", "SSM", "registration", "business info" → business-information
+- "contact", "phone", "email", "company contact", "reach us" → company-contact
+- "bank", "account", "payment", "banking", "money matters" → bank-information
+- "menu", "food", "items", "dishes", "restaurant menu" → food-menu
+- "documents", "files", "papers", "storage", "my documents" → documents
+- "loan", "money", "investment", "finance", "funding", "financial help" → loan-investment-incentive
+
+MALAY:
+- "dashboard", "papan pemuka", "halaman utama", "laman utama" → dashboard
+- "maklumat peribadi", "profil", "butiran peribadi", "info peribadi" → personal-information
+- "maklumat perniagaan", "butiran syarikat", "SSM", "pendaftaran", "perniagaan" → business-information
+- "hubungan", "telefon", "emel", "kontak syarikat", "hubungi" → company-contact
+- "bank", "akaun", "pembayaran", "perbankan", "wang" → bank-information
+- "menu", "makanan", "hidangan", "senarai makanan" → food-menu
+- "dokumen", "fail", "kertas", "simpanan", "dokumen saya" → documents
+- "pinjaman", "wang", "pelaburan", "kewangan", "bantuan kewangan" → loan-investment-incentive
+
+NATURAL LANGUAGE PATTERNS:
+- "I want to see..." / "Saya nak tengok..."
+- "Show me..." / "Tunjukkan..."
+- "Take me to..." / "Bawa saya ke..."
+- "I need to check..." / "Saya perlu semak..."
+- "Where can I find..." / "Di mana boleh jumpa..."
+- "I'm looking for..." / "Saya cari..."
+
+Required response format (respond with ONLY this JSON structure):
+{
+  "targetPage": "dashboard",
+  "confidence": 0.95
+}
+
+If the request is unclear or doesn't match any page, respond with:
+{
+  "targetPage": "unknown",
+  "confidence": 0.0
+}
+`;
+    }
     // Enhanced document processing for smart navigation
-    if (analysisType === 'document-smart-analysis' && documentContent) {
+    else if (analysisType === 'document-smart-analysis' && documentContent) {
       // Check if this is an image/PDF document (contains base64 data)
       const isFileUpload = documentContent.includes('Base64 Data:');
 
@@ -171,6 +236,43 @@ ${JSON.stringify(currentData, null, 2)}
 
     const response = await result.response;
     const text = response.text();
+
+    // Handle navigation request parsing
+    if (analysisType === 'navigation-request') {
+      try {
+        let cleanedText = text.trim();
+        
+        // Remove any markdown formatting if present
+        if (cleanedText.startsWith('```json')) {
+          cleanedText = cleanedText.replace(/```json\s*/, '').replace(/\s*```$/, '');
+        } else if (cleanedText.startsWith('```')) {
+          cleanedText = cleanedText.replace(/```\s*/, '').replace(/\s*```$/, '');
+        }
+
+        const parsedResponse = JSON.parse(cleanedText);
+        if (parsedResponse.targetPage && parsedResponse.confidence !== undefined) {
+          return NextResponse.json({
+            response: cleanedText,
+            parsed: parsedResponse,
+            isValidJson: true
+          });
+        } else {
+          return NextResponse.json({
+            response: text,
+            isValidJson: false,
+            error: 'AI response missing required fields (targetPage, confidence)'
+          });
+        }
+      } catch (parseError) {
+        console.warn('Failed to parse navigation response as JSON:', parseError);
+        console.warn('Raw AI response:', text);
+        return NextResponse.json({
+          response: text,
+          isValidJson: false,
+          error: 'AI did not return valid JSON format for navigation'
+        });
+      }
+    }
 
     // For smart document analysis, try to parse and validate JSON
     if (analysisType === 'document-smart-analysis') {

@@ -7,7 +7,7 @@ export default function FoodMenuPage() {
   const router = useRouter();
 
   const handleBack = () => {
-    router.push("/");
+    router.push("/dashboard");
   };
 
   return <FoodMenu onBack={handleBack} />;

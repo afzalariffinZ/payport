@@ -7,7 +7,7 @@ export default function PersonalInformationPage() {
   const router = useRouter();
 
   const handleBack = () => {
-    router.push("/");
+    router.push("/dashboard");
   };
 
   return <PersonalInformation onBack={handleBack} />;

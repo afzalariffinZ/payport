@@ -11,10 +11,15 @@ import {
   Edit3,
   QrCode,
   Store,
+  DollarSign,
+  BarChart3,
+  Smartphone,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useDocumentData } from "@/lib/document-data-store";
+import { useLanguage } from "@/lib/language-context";
 import QRCodeModal from "./qr-code-modal";
+import LanguageToggle from "./language-toggle";
 import Link from "next/link";
 
 interface MenuItem {
@@ -25,37 +30,53 @@ interface MenuItem {
 
 export default function MerchantDashboard() {
   const [showQRModal, setShowQRModal] = useState(false);
+  const { t } = useLanguage();
 
   const menuItems: MenuItem[] = [
     {
       icon: Building2,
-      label: "Business Information",
+      label: t('nav.businessInfo'),
       route: "/business-information",
     },
     {
       icon: User,
-      label: "Personal Information",
+      label: t('nav.personalInfo'),
       route: "/personal-information",
     },
     {
       icon: Phone,
-      label: "Company Contact",
+      label: t('nav.companyContact'),
       route: "/company-contact",
     },
     {
       icon: Landmark,
-      label: "Bank Information",
+      label: t('nav.bankInfo'),
       route: "/bank-information",
     },
     {
       icon: FileText,
-      label: "Documents",
+      label: t('nav.documents'),
       route: "/documents",
     },
     {
       icon: UtensilsCrossed,
-      label: "Food Menu",
+      label: t('nav.foodMenu'),
       route: "/food-menu",
+    },
+    {
+      icon: DollarSign,
+      label: t('nav.loanInvestment'),
+      route: "/loan-investment-incentive",
+    },
+    {
+      icon: BarChart3,
+      label: t('nav.transactionAnalysis'),
+      route: "/transaction-analysis",
+    },
+    {
+      icon: Smartphone,
+      label: t('nav.connectedApps'),
+      route: "/connected-apps",
     },
   ];
 
@@ -81,17 +102,20 @@ export default function MerchantDashboard() {
                       <User className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h1 className="text-xl font-bold text-gray-900">Merchant Dashboard</h1>
+                      <h1 className="text-xl font-bold text-gray-900">{t('dashboard.title')}</h1>
                       <p className="text-sm text-gray-600">PayPort Real</p>
                     </div>
                   </div>
-                  <button
-                    onClick={handleEditClick}
-                    className="inline-flex items-center px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition-colors duration-200"
-                  >
-                    <Edit3 className="w-4 h-4 mr-2" />
-                    Edit Profile
-                  </button>
+                  <div className="flex items-center space-x-4">
+                    <LanguageToggle />
+                    <button
+                      onClick={handleEditClick}
+                      className="inline-flex items-center px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition-colors duration-200"
+                    >
+                      <Edit3 className="w-4 h-4 mr-2" />
+                      {t('action.edit')} Profile
+                    </button>
+                  </div>
                 </div>
               </div>
             </header>
@@ -105,24 +129,18 @@ export default function MerchantDashboard() {
                     <div className="text-center">
                       {/* Store Logo */}
                       <div className="mb-6">
-                        <div className="w-24 h-24 mx-auto bg-gradient-to-br from-pink-500 to-pink-600 rounded-full flex items-center justify-center shadow-lg">
-                          {/* Placeholder logo - replace with actual image */}
-                          <Store className="w-12 h-12 text-white" />
-                        </div>
-                        <div className="mt-4">
-                          <h1 className="text-2xl font-bold text-pink-600 mb-1">Nasi Lemak Bangsar</h1>
-                          <p className="text-sm text-gray-500">Authentic Malaysian Cuisine</p>
-                        </div>
-                      </div>
 
-                      {/* Welcome Message */}
-                      <div>
-                        <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                          Hi, Aisyah Binti Ramli
-                        </h2>
-                        <p className="text-gray-600 text-lg">
-                          Manage your merchant profile with ease
-                        </p>
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-pink-600 rounded-full flex items-center justify-center shadow">
+                            <Store className="w-8 h-8 text-white" />
+                          </div>
+                          <h1 className="mt-2 text-lg font-bold text-pink-600 leading-tight">Nasi Lemak Bangsar</h1>
+                          <span className="text-xs text-gray-500">Authentic Malaysian Cuisine</span>
+                          <div className="mt-1 text-center">
+                            <span className="block text-base font-semibold text-gray-900">{t('dashboard.welcome')}, <span className="font-medium text-gray-800">Aisyah Binti Ramli</span></span>
+                            <span className="text-xs text-gray-600">{t('common.manageProfile')}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -131,7 +149,7 @@ export default function MerchantDashboard() {
                 {/* Menu Items Grid */}
                 <div className="lg:col-span-2">
                   <div className="bg-white rounded-2xl shadow-sm p-8">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-6">{t('dashboard.quickActions')}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                       {menuItems.map((item, index) => {
                         const IconComponent = item.icon;
@@ -167,21 +185,21 @@ export default function MerchantDashboard() {
                         className="w-full bg-pink-500 hover:bg-pink-600 text-white rounded-xl py-6 text-base font-semibold transition-all duration-200 hover:shadow-lg"
                       >
                         <QrCode className="w-5 h-5 mr-3" />
-                        Display QR Code
+                        {t('common.displayQR')}
                       </Button>
 
                       {/* Additional Quick Stats */}
                       <div className="mt-8 space-y-4">
                         <div className="bg-gray-50 rounded-xl p-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-600">Profile Status</span>
-                            <span className="text-sm font-semibold text-green-600">Complete</span>
+                            <span className="text-sm font-medium text-gray-600">{t('common.profileStatus')}</span>
+                            <span className="text-sm font-semibold text-green-600">{t('common.complete')}</span>
                           </div>
                         </div>
                         
                         <div className="bg-gray-50 rounded-xl p-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-600">Last Updated</span>
+                            <span className="text-sm font-medium text-gray-600">{t('common.lastUpdated')}</span>
                             <span className="text-sm font-semibold text-gray-900">Today</span>
                           </div>
                         </div>

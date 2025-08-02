@@ -7,7 +7,7 @@ export default function BankInformationPage() {
   const router = useRouter();
 
   const handleBack = () => {
-    router.push("/");
+    router.push("/dashboard");
   };
 
   return <BankInformation onBack={handleBack} />;

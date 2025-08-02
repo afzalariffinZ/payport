@@ -7,7 +7,7 @@ export default function DocumentsPage() {
   const router = useRouter();
 
   const handleBack = () => {
-    router.push("/");
+    router.push("/dashboard");
   };
 
   return <Documents onBack={handleBack} />;

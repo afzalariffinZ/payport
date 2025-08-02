@@ -7,7 +7,7 @@ export default function BusinessInformationPage() {
   const router = useRouter();
 
   const handleBack = () => {
-    router.push("/");
+    router.push("/dashboard");
   };
 
   return <BusinessInformation onBack={handleBack} />;

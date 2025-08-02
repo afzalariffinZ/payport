@@ -69,7 +69,7 @@ export default function AIChatbot() {
     const [messages, setMessages] = useState<Message[]>([
         {
             id: '1',
-            content: "Hi! I'm your AI assistant. I can help you update your merchant profile data. You can ask me to change specific information or upload documents and images for me to analyze and suggest updates.",
+            content: "Hi! I'm your AI assistant. I can help you in English and Malay:\n\n🔄 **Update your data** - Ask me to change information or upload documents\n🧭 **Navigate pages** - Say 'take me to dashboard' or 'bawa saya ke maklumat perniagaan'\n📄 **Analyze documents** - Upload files and I'll extract data\n\n**Try saying:**\n• \"Show me business information\" / \"Tunjukkan maklumat perniagaan\"\n• \"I want to see my profile\" / \"Saya nak tengok profil saya\"\n\nWhat would you like to do?",
             sender: 'ai',
             timestamp: new Date(),
             type: 'text'
@@ -95,6 +95,51 @@ export default function AIChatbot() {
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    // Function to detect if user input is a navigation request
+    const detectNavigationRequest = (message: string): boolean => {
+        const lowerMessage = message.toLowerCase().trim();
+
+        const navigationPatterns = [
+            // English patterns
+            /^(take me to|bring me to|go to|navigate to|open|show me)\s+/,
+            /^(i want to go to|i need to go to|can you take me to)\s+/,
+            /^(switch to|move to|redirect to)\s+/,
+            /^(i want to see|i need to check|i'm looking for)\s+/,
+            /^(where can i find|how do i access)\s+/,
+            
+            // Malay patterns
+            /^(bawa saya ke|pergi ke|tunjukkan|buka)\s+/,
+            /^(saya nak pergi|saya nak tengok|saya nak lihat)\s+/,
+            /^(boleh bawa ke|tolong buka|mana nak)\s+/,
+            /^(saya cari|di mana|macam mana nak)\s+/,
+            /^(nak tengok|nak semak|nak lihat)\s+/,
+            
+            // Mixed patterns and direct page references
+            /(page|halaman|section|bahagian)$/,
+            /^(dashboard|papan pemuka)$/,
+            /^(personal|peribadi|maklumat peribadi)$/,
+            /^(business|perniagaan|maklumat perniagaan)$/,
+            /^(contact|hubungan|kontak)$/,
+            /^(bank|perbankan)$/,
+            /^(menu|makanan)$/,
+            /^(documents|dokumen)$/,
+            /^(loan|pinjaman|pelaburan)$/,
+            
+            // Natural expressions
+            /\b(want to see|nak tengok|want to check|nak semak)\b/,
+            /\b(looking for|cari|find|jumpa)\b/,
+            /\b(access|masuk|enter|buka)\b/,
+        ];
+
+        for (const pattern of navigationPatterns) {
+            if (pattern.test(lowerMessage)) {
+                return true;
+            }
+        }
+
+        return false;
     };
 
     // Function to detect if user input is a question vs a data change request
@@ -303,7 +348,87 @@ export default function AIChatbot() {
     };
 
     const handleTextProcessing = async (prompt: string) => {
-        // First, determine if this is a question/query or a data change request
+        // First, check if this is a navigation request
+        const isNavigationRequest = detectNavigationRequest(prompt);
+
+        if (isNavigationRequest) {
+            // Handle navigation request
+            const response = await fetch('/api/gemini', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    analysisType: 'navigation-request'
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to process navigation request');
+            }
+
+            const data = await response.json();
+
+            if (data.isValidJson && data.parsed) {
+                const { targetPage, confidence } = data.parsed;
+
+                if (targetPage !== 'unknown' && confidence > 0.5) {
+                    // Navigate directly
+                    const aiMessage: Message = {
+                        id: (Date.now() + 1).toString(),
+                        content: `Taking you to the ${getDisplayNameFromPage(targetPage)} page...`,
+                        sender: 'ai',
+                        timestamp: new Date(),
+                        type: 'text'
+                    };
+
+                    setMessages(prev => [...prev, aiMessage]);
+
+                    // Navigate after a short delay
+                    setTimeout(() => {
+                        setPendingNavigation(targetPage, `Navigated via AI Smart Navigator`);
+                        setIsOpen(false);
+                    }, 1000);
+                } else {
+                    // Unclear navigation request - ask for clarification
+                    const availablePages = [
+                        'Dashboard / Papan Pemuka', 
+                        'Personal Information / Maklumat Peribadi', 
+                        'Business Information / Maklumat Perniagaan', 
+                        'Company Contact / Hubungan Syarikat', 
+                        'Bank Information / Maklumat Bank', 
+                        'Food Menu / Menu Makanan', 
+                        'Documents / Dokumen', 
+                        'Loan & Investment / Pinjaman & Pelaburan'
+                    ];
+
+                    const aiMessage: Message = {
+                        id: (Date.now() + 1).toString(),
+                        content: `I'm not sure which page you'd like to visit. Here are the available pages:\n\n${availablePages.map(page => `• ${page}`).join('\n')}\n\n**Try saying:**\n• "Take me to business information" / "Bawa saya ke maklumat perniagaan"\n• "I want to see my dashboard" / "Saya nak tengok dashboard"\n• "Show me bank details" / "Tunjukkan butiran bank"`,
+                        sender: 'ai',
+                        timestamp: new Date(),
+                        type: 'text'
+                    };
+
+                    setMessages(prev => [...prev, aiMessage]);
+                }
+            } else {
+                // Fallback for failed navigation parsing
+                const aiMessage: Message = {
+                    id: (Date.now() + 1).toString(),
+                    content: "I didn't quite understand where you'd like to go. Try being more specific:\n\n**English:** 'take me to business information' or 'show me the dashboard'\n**Malay:** 'bawa saya ke maklumat perniagaan' or 'tunjukkan dashboard'",
+                    sender: 'ai',
+                    timestamp: new Date(),
+                    type: 'text'
+                };
+
+                setMessages(prev => [...prev, aiMessage]);
+            }
+            return;
+        }
+
+        // Check if it's a general question (existing logic)
         const isQuestion = detectIfQuestion(prompt);
 
         if (isQuestion) {
@@ -563,12 +688,38 @@ Focus on extracting accurate information that can be used to update a merchant p
     const handleSmartNavigation = (navigationData: Message['navigationData']) => {
         if (!navigationData) return;
 
+        // Check if profile data is still loading
+        if (isProfileLoading) {
+            const loadingMessage: Message = {
+                id: Date.now().toString(),
+                content: "Please wait while I load your current profile information...",
+                sender: 'ai',
+                timestamp: new Date(),
+                type: 'text'
+            };
+            setMessages(prev => [...prev, loadingMessage]);
+            return;
+        }
+
+        // Check if there was an error loading profile data
+        if (profileError) {
+            const errorMessage: Message = {
+                id: Date.now().toString(),
+                content: "I'm having trouble loading your current profile data. You can still proceed, but I won't be able to compare with your existing information.",
+                sender: 'ai',
+                timestamp: new Date(),
+                type: 'text'
+            };
+            setMessages(prev => [...prev, errorMessage]);
+        }
+
         const { dataType, targetPage, extractedData } = navigationData;
 
         // Create changes object by comparing extracted data with current data
         const changes: Record<string, any> = {};
         Object.entries(extractedData).forEach(([key, newValue]) => {
-            const oldValue = (profileData as any)[key] || '';
+            // Add null check for profileData
+            const oldValue = profileData && (profileData as any)[key] ? (profileData as any)[key] : '';
             if (newValue && newValue !== oldValue) {
                 changes[key] = {
                     old: oldValue,
@@ -708,11 +859,21 @@ Focus on extracting accurate information that can be used to update a merchant p
                                                             <div className="flex flex-col space-y-3">
                                                                 <Button
                                                                     onClick={() => handleSmartNavigation(message.navigationData)}
-                                                                    className="w-full bg-[#ff0080] hover:bg-[#e00074] text-white text-base py-4 px-6 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                                                                    disabled={isProfileLoading}
+                                                                    className="w-full bg-[#ff0080] hover:bg-[#e00074] text-white text-base py-4 px-6 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                                                     size="lg"
                                                                 >
-                                                                    <ArrowRight className="w-5 h-5 mr-2" />
-                                                                    Take me there
+                                                                    {isProfileLoading ? (
+                                                                        <>
+                                                                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                                                            Loading data...
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <ArrowRight className="w-5 h-5 mr-2" />
+                                                                            Take me there
+                                                                        </>
+                                                                    )}
                                                                 </Button>
                                                                 <Button
                                                                     onClick={handleDismissNavigation}
@@ -776,7 +937,7 @@ Focus on extracting accurate information that can be used to update a merchant p
                                         value={inputMessage}
                                         onChange={(e) => setInputMessage(e.target.value)}
                                         onKeyPress={handleKeyPress}
-                                        placeholder="Ask me to update your data or upload a document..."
+                                        placeholder="Ask me in English or Malay... / Tanya saya dalam English atau Melayu..."
                                         className="min-h-[60px] resize-none"
                                         disabled={isLoading}
                                     />
@@ -811,7 +972,7 @@ Focus on extracting accurate information that can be used to update a merchant p
                             />
 
                             <p className="text-xs text-gray-500 mt-2">
-                                Upload documents or images (TXT, PDF, DOC, JPG, PNG) or ask me to change specific data
+                                Upload documents (TXT, PDF, DOC, JPG, PNG), ask me to navigate pages, or request data changes
                             </p>
                         </div>
 
