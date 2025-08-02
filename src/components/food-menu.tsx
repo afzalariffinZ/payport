@@ -33,6 +33,7 @@ interface MenuItem {
   description: string;
   Category: string;
   addOns: AddOn[];
+  disabled?: boolean;
 }
 
 interface FoodMenuProps {
@@ -117,28 +118,73 @@ export default function FoodMenu({ onBack }: FoodMenuProps) {
       // Generate changes object for the modal
       const changes: Record<string, any> = {};
       Object.entries(stagedData.extractedData).forEach(([key, newValue]) => {
-        const match = key.match(/^(\d+)_(.+)$/);
-        if (!match) return;
-        const index = parseInt(match[1], 10);
-        const field = match[2];
-        if (menuItems[index] && field in menuItems[index]) {
-          const oldValue = (menuItems[index] as any)[field];
-          changes[key] = {
-            field: `Item ${index} - ${field.charAt(0).toUpperCase() + field.slice(1)}`,
-            old: oldValue,
-            new: newValue
-          };
+        // Handle bulk operations
+        if (key.startsWith('BULK_')) {
+          const parts = key.split('_');
+          const operation = parts[1];
+          const criteriaRaw = parts.slice(2).join('_');
+          const targetValue = operation === 'enable' ? false : true;
+
+          menuItems.forEach((item, index) => {
+            let shouldApply = false;
+
+            if (criteriaRaw === 'all') {
+              shouldApply = true;
+            } else {
+              const searchText = `${item.name} ${item.description}`.toLowerCase();
+              const criteriaNormalized = criteriaRaw.replace(/_/g, ' ').toLowerCase();
+
+              // Match if either full phrase matches or ALL words are present
+              if (searchText.includes(criteriaNormalized)) {
+                shouldApply = true;
+              } else {
+                const words = criteriaNormalized.split(' ').filter(Boolean);
+                shouldApply = words.every(word => searchText.includes(word));
+              }
+            }
+
+            if (shouldApply && item.disabled !== targetValue) {
+              changes[`${index}_disabled`] = {
+                field: `${item.name} - Status`,
+                old: item.disabled ? 'Disabled' : 'Enabled',
+                new: targetValue ? 'Disabled' : 'Enabled'
+              };
+            }
+          });
+        } else {
+          // Handle individual item changes
+          const match = key.match(/^(\d+)_(.+)$/);
+          if (!match) return;
+          const index = parseInt(match[1], 10);
+          const field = match[2];
+          if (menuItems[index] && field in menuItems[index]) {
+            const oldValue = (menuItems[index] as any)[field];
+            let displayValue = oldValue;
+            let newDisplayValue = newValue;
+            
+            // Special handling for disabled field
+            if (field === 'disabled') {
+              displayValue = oldValue ? 'Disabled' : 'Enabled';
+              newDisplayValue = newValue ? 'Disabled' : 'Enabled';
+            }
+            
+            changes[key] = {
+              field: `${menuItems[index].name} - ${field.charAt(0).toUpperCase() + field.slice(1)}`,
+              old: displayValue,
+              new: newDisplayValue
+            };
+          }
         }
       });
       
-      // Update staged data with changes
-      if (Object.keys(changes).length > 0) {
-        stagedData.changes = changes;
-      }
-      
-      setShowReviewModal(true);
-    }
-  }, [stagedData]);
+     // Update staged data with changes
+     if (Object.keys(changes).length > 0) {
+       stagedData.changes = changes;
+     }
+     
+     setShowReviewModal(true);
+   }
+ }, [stagedData]);
 
   // Store menu data globally for AI access
   useEffect(() => {
@@ -158,9 +204,16 @@ export default function FoodMenu({ onBack }: FoodMenuProps) {
       if (!match) return;
       const index = parseInt(match[1], 10);
       const field = match[2];
-      if (updatedItems[index] && field in updatedItems[index]) {
-        // @ts-ignore – dynamic field assignment
-        updatedItems[index][field as keyof MenuItem] = change.new;
+      if (updatedItems[index]) {
+        let valueToApply = change.new;
+        
+        // Special handling for disabled field - convert display text back to boolean
+        if (field === 'disabled') {
+          valueToApply = change.new === 'Disabled' ? true : false;
+        }
+        
+        // @ts-ignore – dynamic field assignment (allows adding new field)
+        (updatedItems[index] as any)[field] = valueToApply;
         applied += 1;
       }
     });
@@ -186,7 +239,8 @@ export default function FoodMenu({ onBack }: FoodMenuProps) {
     price: 0,
     description: "",
     Category: "Main Course",
-    addOns: []
+    addOns: [],
+    disabled: false
   });
 
   // Group items by category
@@ -220,7 +274,8 @@ export default function FoodMenu({ onBack }: FoodMenuProps) {
       price: 0,
       description: "",
       Category: "Main Course",
-      addOns: []
+      addOns: [],
+      disabled: false
     });
     setIsAddingNew(false);
   };
@@ -288,7 +343,11 @@ export default function FoodMenu({ onBack }: FoodMenuProps) {
         <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-semibold text-gray-900">Nasi Lemak Bangsar Menu</h2>
-            <span className="text-sm text-gray-600">{menuItems.length} items</span>
+            <div className="flex items-center space-x-4 text-sm">
+              <span className="text-gray-600">{menuItems.length} total items</span>
+              <span className="text-green-600">{menuItems.filter(item => !item.disabled).length} enabled</span>
+              <span className="text-red-600">{menuItems.filter(item => item.disabled).length} disabled</span>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {categories.map(category => (
@@ -297,9 +356,19 @@ export default function FoodMenu({ onBack }: FoodMenuProps) {
                   <span className="text-2xl">{getCategoryIcon(category)}</span>
                   <h3 className="font-medium text-gray-900">{category}</h3>
                 </div>
-                <p className="text-sm text-gray-600">
-                  {categorizedItems[category].length} item{categorizedItems[category].length !== 1 ? 's' : ''}
-                </p>
+                <div className="text-sm space-y-1">
+                  <p className="text-gray-600">
+                    {categorizedItems[category].length} item{categorizedItems[category].length !== 1 ? 's' : ''}
+                  </p>
+                  <div className="flex space-x-2">
+                    <span className="text-green-600">
+                      {categorizedItems[category].filter(item => !item.disabled).length} enabled
+                    </span>
+                    <span className="text-red-600">
+                      {categorizedItems[category].filter(item => item.disabled).length} disabled
+                    </span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -416,29 +485,83 @@ function MenuItemCard({ item, index, isEditing, onEdit, onSave, onCancel, onDele
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
+    <div className={`bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200 ${
+      item.disabled ? 'opacity-50 grayscale bg-gray-100' : ''
+    }`}>
       {/* Image */}
       <div className="relative h-48 bg-gray-100">
+        {item.disabled && (
+          <div className="absolute inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center z-10">
+            <div className="text-center">
+              <span className="text-white font-bold text-xl">UNAVAILABLE</span>
+              <p className="text-gray-300 text-sm mt-1">Item is disabled</p>
+            </div>
+          </div>
+        )}
         <img
           src={item.picture}
           alt={item.name}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover ${item.disabled ? 'filter grayscale' : ''}`}
           onError={(e) => {
             (e.target as HTMLImageElement).src = '/api/placeholder/400/200';
           }}
         />
         <div className="absolute top-4 right-4">
-          <span className="bg-pink-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+            item.disabled ? 'bg-gray-600 text-gray-300 line-through' : 'bg-pink-500 text-white'
+          }`}>
             {formatPrice(item.price)}
           </span>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-6">
-        <div className="flex items-start justify-between mb-3">
-          <h3 className="text-xl font-semibold text-gray-900 flex-1">{item.name}</h3>
-          <div className="flex space-x-2 ml-4">
+      <div className="p-6 space-y-4">
+        {/* Title and Description */}
+        <div>
+          <h3 className={`text-xl font-bold mb-2 ${
+            item.disabled ? 'text-gray-500' : 'text-gray-900'
+          }`}>
+            {item.name}
+            {item.disabled && <span className="ml-2 text-xs bg-gray-500 text-white px-2 py-1 rounded">DISABLED</span>}
+          </h3>
+          <p className={`text-sm leading-relaxed ${
+            item.disabled ? 'text-gray-400' : 'text-gray-600'
+          }`}>
+            {item.description}
+          </p>
+        </div>
+
+        {/* Add-ons */}
+        {item.addOns && item.addOns.length > 0 && (
+          <div>
+            <h4 className={`text-sm font-semibold mb-2 ${
+              item.disabled ? 'text-gray-500' : 'text-gray-700'
+            }`}>
+              Available Add-ons:
+            </h4>
+            <div className="space-y-1">
+              {item.addOns.map((addon, index) => (
+                <div key={index} className="flex justify-between items-center">
+                  <span className={`text-xs ${
+                    item.disabled ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    {addon.name}
+                  </span>
+                  <span className={`text-xs font-medium ${
+                    item.disabled ? 'text-gray-400 line-through' : 'text-pink-600'
+                  }`}>
+                    {formatPrice(addon.price)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="border-t border-gray-200 pt-4">
+          <div className="flex items-center space-x-2">
             <Button
               onClick={onEdit}
               variant="outline"
@@ -447,6 +570,20 @@ function MenuItemCard({ item, index, isEditing, onEdit, onSave, onCancel, onDele
             >
               <Edit className="w-4 h-4 mr-1" />
               Edit
+            </Button>
+            <Button
+              onClick={() => {
+                const updatedItem = { ...item, disabled: !item.disabled };
+                onSave(updatedItem);
+              }}
+              variant="outline"
+              size="sm"
+              className={item.disabled 
+                ? "text-green-600 border-green-200 hover:bg-green-50" 
+                : "text-orange-600 border-orange-200 hover:bg-orange-50"
+              }
+            >
+              {item.disabled ? 'Enable' : 'Disable'}
             </Button>
             <Button
               onClick={onDelete}
@@ -458,25 +595,6 @@ function MenuItemCard({ item, index, isEditing, onEdit, onSave, onCancel, onDele
             </Button>
           </div>
         </div>
-
-        <p className="text-gray-600 text-sm mb-4 leading-relaxed">{item.description}</p>
-
-        {/* Add-ons */}
-        {item.addOns.length > 0 && (
-          <div className="border-t border-gray-100 pt-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">Available Add-ons:</h4>
-            <div className="space-y-1">
-              {item.addOns.map((addon, addonIndex) => (
-                <div key={addonIndex} className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">{addon.name}</span>
-                  <span className="text-pink-600 font-medium">
-                    {addon.price === 0 ? 'FREE' : `+${formatPrice(addon.price)}`}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -555,6 +673,18 @@ function MenuItemEditor({ item, onChange, onSave, onCancel, isNew }: MenuItemEdi
             onChange={(e) => onChange({ ...item, picture: e.target.value })}
             placeholder="https://example.com/image.jpg"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+          <select
+            value={item.disabled ? 'disabled' : 'enabled'}
+            onChange={(e) => onChange({ ...item, disabled: e.target.value === 'disabled' })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+          >
+            <option value="enabled">Enabled</option>
+            <option value="disabled">Disabled</option>
+          </select>
         </div>
       </div>
 

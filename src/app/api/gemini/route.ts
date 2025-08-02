@@ -191,6 +191,24 @@ Examples:
 - "rename Nasi Lemak Rendang Daging to Premium Rendang" -> find item index, extract "INDEX_name": "Premium Rendang"
 - "change Teh Ais Kaw price to 3.50" -> find item index, extract "INDEX_price": 3.50
 - "update Kuih-Muih description to New description" -> find item index, extract "INDEX_description": "New description"
+- "disable Nasi Lemak Rendang Daging" -> find item index, extract "INDEX_disabled": true
+- "enable all items" -> extract "ALL_disabled": false
+- "disable all items with rice" -> find matching items, extract "MATCHING_disabled": true with criteria: "rice"
+
+SPECIAL DISABLE/ENABLE COMMANDS:
+- When user says "disable [item name]" -> set that specific item's disabled to true
+- When user says "enable [item name]" -> set that specific item's disabled to false  
+- When user says "disable all items with [keyword]" -> find all items containing keyword in name or description, set disabled to true
+- When user says "enable all items with [keyword]" -> find all items containing keyword in name or description, set disabled to false
+- When user says "disable all items" -> set all items disabled to true
+- When user says "enable all items" -> set all items disabled to false
+
+For bulk operations, use format: "BULK_[operation]_[criteria]" where:
+- operation: "disable" or "enable"  
+- criteria: "all" or specific keyword like "rice", "chicken", etc.
+Examples:
+- "disable all items with rice" -> "BULK_disable_rice": true
+- "enable all items" -> "BULK_enable_all": true
 
 Current menu items for reference:
 ${JSON.stringify(currentData, null, 2)}
